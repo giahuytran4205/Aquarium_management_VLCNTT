@@ -1,0 +1,14 @@
+.button {
+    border-radius: 20px;
+    height: 30px;
+    padding: 0px;
+    padding-bottom: 2px;
+    background-color: #122053;
+    color: white;
+    font-weight: 400;
+}
+
+.button:disabled {
+    background-color: rgb(150, 150, 150);
+    pointer-events: none;
+}

@@ -1,0 +1,72 @@
+# Node modules
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env.*.local
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Build output
+dist/
+build/
+tmp/
+temp/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor folders
+.vscode/
+.idea/
+*.sw?
+
+# Test coverage
+coverage/
+
+# Optional npm cache directory
+.npm/
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# TypeScript
+*.tsbuildinfo
+
+# PM2 process manager
+pids/
+*.pid
+*.pid.lock
+
+# Next.js (nếu có)
+.next/
+
+# Parcel cache (nếu có)
+.cache/
+
+# VSCode local history (if plugin is installed)
+.history/
+
+# Database files
+*.db
+*.db.wal
+*.db-shm
+
+# Firebase admin key
+aquarium-app-d2b00-firebase-adminsdk-fbsvc-8979b80bd4.json

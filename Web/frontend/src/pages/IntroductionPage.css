@@ -1,0 +1,34 @@
+.introduction-page {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    align-items: start;
+}
+
+.nav-introduction {
+    font-size: 22px;
+    color: #00f;
+}
+
+.introduction-page nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 10px;
+    padding: 20px;
+}
+
+.login-btn {
+    border-radius: 20px;
+    height: 40px;
+    padding: 0px 20px 2px 20px;
+    color: rgb(0, 47, 255);
+    background-color: rgba(255, 255, 255, 0.2);
+    background-image: radial-gradient(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.3));
+    outline: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.login-btn:hover {
+    background-color: rgba(174, 174, 174, 0.2);
+}

@@ -1,0 +1,5 @@
+.loading-dialog {
+    display: flex;
+    flex-direction: row;
+    z-index: 9999;
+}

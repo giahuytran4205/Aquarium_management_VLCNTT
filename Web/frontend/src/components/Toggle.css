@@ -1,0 +1,7 @@
+.toggle {
+    position: relative;
+    
+    input {
+        display: none;
+    }
+}

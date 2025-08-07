@@ -1,0 +1,44 @@
+.customize-widget-page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 20px 20px 20px 20px;
+}
+
+.customize-widget-page .display {
+    width: 256px;
+    height: 128px;
+    background-color: black;
+    display: flex;
+    flex-direction: column;
+
+    >* {
+        color: cyan;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    div.vr {
+        width: 2px;
+        height: 100%;
+        background-color: cyan;
+    }
+
+    .hr {
+        width: 100%;
+        height: 2px;
+        background-color: cyan;
+    }
+
+    .date-time {
+        height: auto;
+        display: flex;
+        justify-content: space-between;
+        padding: 2px 5px;
+        font-size: 10px;
+    }
+
+    .info-part {
+        
+    }
+}
