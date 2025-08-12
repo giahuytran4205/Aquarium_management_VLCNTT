@@ -87,17 +87,105 @@ async function main() {
 	app.get('/', (req, res) => {
 		res.send("IoT backend server is running.");
 	});
-	app.get('/sensors/:device_id', checkAuth, async (req, res) => {
+
+	app.get('/api/devices', checkAuth, async (req, res) => {
+		let QUERY = `
+			SELECT devices.* FROM devices 
+			JOIN user_devices ON devices.device_id = user_devices.device_id
+			WHERE uid = ?
+		`;
+		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null]);
+		console.log(reader.getColumnsObjectJS());
+		
+		res.json(reader.getRowObjectsJS());
+	});
+	
+	app.post("/api/devices", checkAuth, async (req, res) => {
+		const QUERY = `INSERT INTO user_devices VALUES (?, ?)`;
+
+		try {
+			await db.run(QUERY, [req.auth?.uid, req.body.device_id]);
+			
+			res.status(201).send("Device has been added successfully");
+		} catch (e: any) {
+			console.error("Error when insert into user_devices:", e.message);
+			res.status(200).send("Device is already added");
+		}
+	});
+
+	app.get('/api/device', checkAuth, async (req, res) => {
+		const QUERY = `
+			SELECT * FROM devices
+			WHERE device_id = ?
+		`;
+		try {
+			const reader = await db.runAndRead(QUERY, [req.body.device_id]);
+			res.json(reader.getRowObjectsJS());
+		}
+		catch (e: any) {
+			res.status(404);
+			console.error("Error when get device infomation: ", e.message);
+		}
+	});
+
+	app.put('/api/device', checkAuth, async (req, res) => {
+		const QUERY = `
+			UPDATE devices
+			SET name = ?
+				description = ?
+			WHERE device_id = ? AND device_id IN (
+				SELECT device_id FROM user_devices
+				WHERE uid = ?
+			)
+		`;
+		try {
+			await db.run(QUERY, [req.body.name, req.body.description, req.body.device_id, req.auth?.uid]);
+			res.status(200);
+		}
+		catch (e) {
+			res.status(400);
+			console.error("Error when update device information: ", e);
+		}
+	});
+
+	app.delete('/api/device', checkAuth, async (req, res) => {
+		const QUERY = `
+			DELETE FROM user_devices
+			WHERE uid = ? AND device_id = ?
+		`;
+		try {
+			await db.run(QUERY, [req.auth?.uid || null, req.body.device_id]);
+			res.status(200);
+		}
+		catch (e: any) {
+			res.status(404);
+			console.error("Error when DELETE device from table user_devices: ", e.message);
+		}
+	});
+
+	app.post('/api/device/start', checkAuth, async (req, res) => {
+
+	});
+
+	app.post('/api/device/stop', checkAuth, async (req, res) => {
+
+	});
+
+	app.post('/api/device/config', checkAuth, async (req, res) => {
+
+	});
+
+	app.get('/api/device/data', checkAuth, async (req, res) => {
 		const limit = 50;
 
 		let QUERY = `
 			SELECT * FROM user_devices
 			WHERE uid = ? AND device_id = ?
 		`;
-		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null, req.params.device_id]);
+		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null, req.body.device_id]);
 
 		if (reader.getRowsJS().length === 0) {
-			res.status(401);
+			res.status(404);
 			return;
 		}
 		
@@ -112,22 +200,11 @@ async function main() {
 		res.json(reader.getColumnsObjectJS());
 	});
 
-	app.post("/register", checkAuth, async (req, res) => {
-		const QUERY = `INSERT INTO user_devices (uid, device_id) VALUES (?, ?)`;
+	app.post('api/deivce/data', checkAuth, async (req, res) => {
 
-		try {
-			await db.run(QUERY, [req.auth?.uid, req.body.device_id]);
-			const t = await db.runAndReadAll("SELECT * FROM user_devices");
-
-			console.table(t.getRowsJS());
-
-			res.status(201).send("Device has been added successfully");
-		} catch (e: any) {
-			console.error("Error when insert into user_devices:", e.message);
-			res.status(200).send("Device is already added");
-		}
 	});
 	
+
 	app.listen(port, () => {
 		console.log(`Server is running on http://localhost:${port}`);
 	});
