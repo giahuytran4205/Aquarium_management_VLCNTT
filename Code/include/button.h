@@ -1,5 +1,5 @@
 // ESP8266 code
-
+#pragma once
 class button {	
 private:
   bool state;
