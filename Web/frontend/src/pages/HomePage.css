@@ -42,7 +42,7 @@
     height: 40px;
     padding: 0px 15px;
     border-radius: 20px;
-    background-color: #122053;
+    background-color: rgba(255, 255, 255, 0.3);
     color: white;
 }
 
@@ -85,6 +85,7 @@
         background-color: #ADCCDD;
         align-items: center;
         justify-content: stretch;
+        height: 25px;
     }
 
     .rename-btn,

@@ -131,7 +131,7 @@ async function main() {
 	app.put('/api/device', checkAuth, async (req, res) => {
 		const QUERY = `
 			UPDATE devices
-			SET name = ?
+			SET name = ?,
 				description = ?
 			WHERE device_id = ? AND device_id IN (
 				SELECT device_id FROM user_devices

@@ -14,6 +14,7 @@ import ChangePasswordPage from "../pages/ChangePasswordPage";
 import ProtectedRoute from "./ProtectedRoute";
 import LogOutPage from "../pages/LogOutPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
+import HomePageLayout from "../layouts/HomePageLayout";
 
 export const router = createBrowserRouter([
     {
@@ -37,17 +38,30 @@ export const router = createBrowserRouter([
         path: "",
         element: <ProtectedRoute />,
         children: [
-            { path: "", element: <MainLayout />, children: [
-                { path: "/user", children: [
-                    { path: "profile", element: <ProfilePage /> },
-                    { path: "change-password", element: <ChangePasswordPage /> },
-                ]},
-                { path: "/home", element: <HomePage /> },
-                { path: "/aquarium-status", element: <AquariumStatusPage /> },
-                { path: "/feeding", element: <FeedingPage /> },
-                { path: "/analysis", element: <AnalysisPage /> },
-                { path: "/customize-widget", element: <CustomizeWidgetPage /> }
-            ]}
+            {
+                path: "",
+                element: <MainLayout />,
+                children: [
+                    {
+                        path: "/user",
+                        children: [
+                            { path: "profile", element: <ProfilePage /> },
+                            { path: "change-password", element: <ChangePasswordPage /> },
+                        ]
+                    },
+                    { path: "/aquarium-status", element: <AquariumStatusPage /> },
+                    { path: "/feeding", element: <FeedingPage /> },
+                    { path: "/analysis", element: <AnalysisPage /> },
+                    { path: "/customize-widget", element: <CustomizeWidgetPage /> }
+                ]
+            },
+            {
+                path: "/home",
+                element: <HomePageLayout />,
+                children: [
+                    { index: true, element: <HomePage /> }    
+                ]
+            }
         ]
     },
     {

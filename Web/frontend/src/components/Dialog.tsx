@@ -6,7 +6,7 @@ interface DialogProps extends React.HTMLProps<HTMLDivElement> {
     duration?: number;
 }
 
-function Dialog({ className, duration, ...rest }: DialogProps) {
+function Dialog({ className, duration, hidden, ...rest }: DialogProps) {
     useRef<HTMLDivElement | null>(null);
     const [style, setStyle] = useState({ opacity: 0, blur: 10, scale: 0.8 });
 
@@ -27,7 +27,7 @@ function Dialog({ className, duration, ...rest }: DialogProps) {
     }, [duration]);
 
     return (
-        <div className="overlay">
+        <div className="overlay" hidden={hidden}>
             <div className={"glassmorphism dialog " + (className || "")} {...rest}
                 style={{
                     transition: "all 0.3s ease",

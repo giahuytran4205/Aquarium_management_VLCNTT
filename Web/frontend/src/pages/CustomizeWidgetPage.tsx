@@ -19,20 +19,6 @@ export default function CustomizeWidgetPage() {
 
     return (
         <div className="customize-widget-page">
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between"
-            }}>
-                <span className="title">Select device</span>
-                <select className="glassmorphism dropdown">
-                    {devices.map((value, index) => 
-                        <option key={index} value={value.id}>
-                            {value.name}
-                        </option>
-                    )}
-                </select>
-            </div>
             <div className="glassmorphism" style={{ gap: "10px" }}>
                 <span>Customize image</span>
                 <WidgetImage file={choosenFile} style={{

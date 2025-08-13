@@ -5,26 +5,11 @@ export default function AquariumStatusPage() {
     const [time, setTime] = useState("12:00AM");
     const [date, setDate] = useState("31/7/2025");
     const [temp, setTemp] = useState("25 C");
-    const devices = Array.from({ length: 10 }, (_, k) => ({ name: "Device " + k, id: k }));
 
     const feedingSchedules = Array.from({ length: 5 }, (_, k) => ({ time: "12:00AM", amount: k }));
 
     return (
         <div className="aquarium-status-page">
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between"
-            }}>
-                <span className="title">Select device</span>
-                <select className="glassmorphism dropdown">
-                    {devices.map((value, index) => 
-                        <option key={index} value={value.id}>
-                            {value.name}
-                        </option>
-                    )}
-                </select>
-            </div>
             <div className="first-part glassmorphism">
                 <div className="time">
                     {time}

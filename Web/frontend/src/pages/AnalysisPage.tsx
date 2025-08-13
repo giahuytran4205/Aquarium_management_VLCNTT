@@ -11,20 +11,6 @@ export default function AnalysisPage() {
 
     return (
         <div className="analysis-page">
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between"
-            }}>
-                <span className="title">Select device</span>
-                <select className="glassmorphism dropdown">
-                    {devices.map((value, index) => 
-                        <option key={index} value={value.id}>
-                            {value.name}
-                        </option>
-                    )}
-                </select>
-            </div>
             <div className="glassmorphism chart">
                 <span className="title">Water temperature</span>
                 <LineChart

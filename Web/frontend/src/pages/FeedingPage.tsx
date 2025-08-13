@@ -17,20 +17,6 @@ export default function FeedingPage() {
 
     return (
         <div className="feeding-page">
-            <div style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "space-between"
-            }}>
-                <span className="title">Select device</span>
-                <select className="glassmorphism dropdown">
-                    {devices.map((value, index) => 
-                        <option key={index} value={value.id}>
-                            {value.name}
-                        </option>
-                    )}
-                </select>
-            </div>
             <div className="first-part glassmorphism">
                 <label className="amount-input">
                     <span className="title">Amount of foods</span>
