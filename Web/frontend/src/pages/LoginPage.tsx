@@ -1,5 +1,5 @@
 import "./LoginPage.css";
-import { app } from "../services/auth/firebase";
+import { app, requestPermission } from "../services/auth/firebase";
 import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { useNavigate } from "react-router-dom";
 import { isSafari } from "../utils/browser";
@@ -45,9 +45,26 @@ export default function LoginPage() {
 
         setState("pending");
         await signInWithEmailAndPassword(auth, email, password)
-        .then((userCredential) => {
+        .then(async (userCredential) => {
             // Signed in
             setState("success");
+            // alert("login ok");
+
+            const fcmToken = await requestPermission();
+            // alert(fcmToken);
+
+            if (fcmToken) {
+                // Gửi token này lên backend
+                await fetch(`http://192.168.1.19:3000/api/save-fcm-token`, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${await userCredential.user.getIdToken()}`
+                },
+                body: JSON.stringify({ fcmToken })
+                });
+            }
+
             navigate("/home");
         })
         .catch((error) => {
@@ -91,6 +108,7 @@ export default function LoginPage() {
                 </>
             )
             showNotification({ children: children, duration: 1000, style: {gap: "10px"} });
+            
         }
         if (state === "error") {
             const children = (

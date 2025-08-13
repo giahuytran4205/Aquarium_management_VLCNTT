@@ -5,6 +5,7 @@ export async function createDatabase() {
 	const db = await openDatabase();
 
 	db.run(`
+		drop table fcm_tokens;
 		CREATE TABLE IF NOT EXISTS devices (
 			device_id INT PRIMARY KEY,
 			name VARCHAR,
@@ -23,5 +24,13 @@ export async function createDatabase() {
 			temperature DOUBLE,
 			PRIMARY KEY (device_id, timestamp)
 		);
+
+		CREATE TABLE IF NOT EXISTS fcm_tokens (
+			uid VARCHAR,
+			token VARCHAR,
+			PRIMARY KEY (uid, token)
+		);
+
 	`).catch(console.error);
+
 }

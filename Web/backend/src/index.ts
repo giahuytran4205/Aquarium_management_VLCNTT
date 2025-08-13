@@ -7,8 +7,9 @@ import admin from "firebase-admin"
 import router from "./routes/user";
 import { createDatabase } from "./database/init";
 import { DecodedIdToken } from "firebase-admin/lib/auth/token-verifier";
+import { Resend } from 'resend';
 
-const serviceAccount: admin.ServiceAccount = require("./aquarium-app-d2b00-firebase-adminsdk-fbsvc-8979b80bd4.json");
+const serviceAccount: admin.ServiceAccount = require("./aquarium-b645f-firebase-adminsdk-fbsvc-6d85df98dc.json");
 
 declare global {
 	namespace Express {
@@ -20,6 +21,7 @@ declare global {
 
 dotenv.config();
 
+const resend = new Resend(process.env.RESEND_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 const mq = mqtt.connect('mqtt://broker.hivemq.com');
@@ -67,7 +69,7 @@ async function main() {
 			let { device_id, timestamp, temperature } = JSON.parse(message.toString());
 			timestamp /= 1000;
 
-			console.log(JSON.parse(message.toString()));
+			// console.log(JSON.parse(message.toString()));
 
 			const QUERY = `
 				INSERT INTO device_logs (device_id, timestamp, temperature)
@@ -83,7 +85,26 @@ async function main() {
 	app.use(express.json());
 	
 	app.use("/api/users", router);
-	
+
+	app.post("/api/save-fcm-token", checkAuth, async (req, res) => {
+		const { fcmToken } = req.body;
+		console.log("requesting", req.body, fcmToken);
+		if (!fcmToken) return res.status(400).send("Missing FCM token");
+
+		try {
+			const QUERY = `
+			INSERT INTO fcm_tokens (uid, token)
+			VALUES (?, ?)
+			`;
+			await db.run(QUERY, [req.auth?.uid, fcmToken]);
+
+			res.status(200).send("Token saved");
+		} catch (err) {
+			console.error("Error saving FCM token:", err);
+			res.status(500).send("Error saving token");
+		}
+	});
+
 	app.get('/', (req, res) => {
 		res.send("IoT backend server is running.");
 	});
@@ -95,7 +116,7 @@ async function main() {
 			WHERE uid = ?
 		`;
 		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null]);
-		console.log(reader.getColumnsObjectJS());
+		// console.log(reader.getColumnsObjectJS());
 		
 		res.json(reader.getRowObjectsJS());
 	});
@@ -203,7 +224,101 @@ async function main() {
 	app.post('api/deivce/data', checkAuth, async (req, res) => {
 
 	});
+
 	
+	app.post("/api/send-notification", async (req, res) => {
+		console.log("api is calling");
+		const { uid, title, body } = req.body;
+		if (!uid || !title || !body) {
+			return res.status(400).send("Missing uid, title or body");
+		}
+
+		try {
+			const QUERY = `SELECT token FROM fcm_tokens WHERE uid = ?`;
+			const reader = await db.runAndReadAll(QUERY, [uid]);
+			const tokens = (reader.getColumnsObjectJS().token as (string | null)[])
+  			.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
+
+			if (!tokens || tokens.length === 0) {
+			return res.status(404).send("No tokens found for this user");
+			}
+
+			// Tạo mảng messages (mỗi message cho 1 token)
+			const messages = tokens.map(token => ({
+			token,
+			notification: { title, body }
+			}));
+
+			// Gửi tất cả message
+			
+			const response = await admin.messaging().sendEach(messages);
+
+			console.log(`✅ Sent to ${response.successCount} devices, ❌ Failed: ${response.failureCount}`);
+			res.status(200).json({
+			success: true,
+			sent: response.successCount,
+			failed: response.failureCount
+			});
+
+		} catch (err) {
+			console.error("Error sending notification:", err);
+			res.status(500).send("Error sending notification");
+		}
+	});
+
+
+	async function sendNotificationToUser(uid: string, title: string, body: string) {
+		try {
+			// Lấy token của user
+			const QUERY = `SELECT token FROM fcm_tokens where uid = ?`;
+			const reader = await db.runAndReadAll(QUERY, [uid]);
+			// console.table(reader.getColumnsObjectJS());
+			const tokens = (reader.getColumnsObjectJS().token as (string | null)[])
+			.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
+
+			if (tokens.length === 0) {
+			console.log(`⚠ Không tìm thấy token cho uid ${uid}`);
+			return;
+			}
+
+			// console.log(`token cho ${uid} là ${tokens.join(", ")}`);
+			// Tạo nội dung thông báo
+			const messages = tokens.map(token => ({
+				token,
+				notification: { title, body }
+			}));
+
+			// console.log(messages);
+
+			// Gửi qua Firebase Admin SDK
+			const response = await admin.messaging().sendEach(messages);	
+			console.log(response);
+
+			console.log(`✅ Đã gửi thông báo cho uid ${uid}`);
+		} catch (err) {
+			console.error("❌ Lỗi khi gửi thông báo:", err);
+		}
+	}
+
+	async function sendEmailToUser(uid: string, title: string, body: string) {
+		
+	}
+
+	// Gọi hàm test này mỗi 10 giây
+	// const TEST_UID = "MaHL1yzS91hTSzUbnp41hGqPn2E3"; // Thay bằng uid thật
+	// setInterval(() => {
+	// sendNotificationToUser(
+	// 	TEST_UID,
+	// 	"Thông báo test",
+	// 	`Đây là tin nhắn gửi lúc ${new Date().toLocaleTimeString()}`
+	// );
+	// }, 10_000);
+
+/* 
+
+	
+*/
+
 
 	app.listen(port, () => {
 		console.log(`Server is running on http://localhost:${port}`);
@@ -229,7 +344,20 @@ async function main() {
 		gracefulShutdown();
 	});
 
+
+
+	resend.emails.send({
+		from: 'hello_you@resend.dev',
+		to: 'etouonichanwa3ka@gmail.com',
+		subject: 'Hello World',
+		html: '<p>Congrats on sending your <strong>first email</strong>!</p>'
+	});
+
+
+
+
+
+
 }
 	
 main();
-
