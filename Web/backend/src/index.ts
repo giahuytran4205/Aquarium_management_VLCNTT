@@ -26,27 +26,27 @@ const app = express();
 const port = process.env.PORT || 5000;
 const mq = mqtt.connect('mqtt://broker.hivemq.com');
 admin.initializeApp({
-  	credential: admin.credential.cert(serviceAccount),
+	credential: admin.credential.cert(serviceAccount),
 });
 
 async function checkAuth(req: Request, res: Response, next: NextFunction) {
-  	const idToken = req.headers.authorization?.split("Bearer ")[1];
-  	if (!idToken) return res.status(401).send("Missing token");
+	const idToken = req.headers.authorization?.split("Bearer ")[1];
+	if (!idToken) return res.status(401).send("Missing token");
 
-  	try {
+	try {
 		const decoded = await admin.auth().verifyIdToken(idToken);
 		req.auth = decoded;
 		next();
-  	} catch (err) {
+	} catch (err) {
 		console.error("Invalid token", err);
 		return res.status(401).send("Invalid token");
-  	}
+	}
 }
 
 async function main() {
 	await createDatabase();
 	const db = await openDatabase();
-	
+
 	mq.on('connect', () => {
 		console.log('Connected to MQTT broker.');
 		mq.subscribe("aquarium/#");
@@ -79,11 +79,11 @@ async function main() {
 				.catch(console.error);
 		}
 	});
-	
-	
+
+
 	app.use(cors());
 	app.use(express.json());
-	
+
 	app.use("/api/users", router);
 
 	app.post("/api/save-fcm-token", checkAuth, async (req, res) => {
@@ -117,16 +117,16 @@ async function main() {
 		`;
 		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null]);
 		// console.log(reader.getColumnsObjectJS());
-		
+
 		res.json(reader.getRowObjectsJS());
 	});
-	
+
 	app.post("/api/devices", checkAuth, async (req, res) => {
 		const QUERY = `INSERT INTO user_devices VALUES (?, ?)`;
 
 		try {
 			await db.run(QUERY, [req.auth?.uid, req.body.device_id]);
-			
+
 			res.status(201).send("Device has been added successfully");
 		} catch (e: any) {
 			console.error("Error when insert into user_devices:", e.message);
@@ -209,7 +209,7 @@ async function main() {
 			res.status(404);
 			return;
 		}
-		
+
 		QUERY = `
 			SELECT timestamp, temperature FROM device_logs
 			WHERE device_id = ?
@@ -217,15 +217,10 @@ async function main() {
 			LIMIT ?
 		`;
 		reader = await db.runAndReadAll(QUERY, [req.params.device_id, limit]);
-	
+
 		res.json(reader.getColumnsObjectJS());
 	});
 
-	app.post('api/deivce/data', checkAuth, async (req, res) => {
-
-	});
-
-	
 	app.post("/api/send-notification", async (req, res) => {
 		console.log("api is calling");
 		const { uid, title, body } = req.body;
@@ -237,27 +232,27 @@ async function main() {
 			const QUERY = `SELECT token FROM fcm_tokens WHERE uid = ?`;
 			const reader = await db.runAndReadAll(QUERY, [uid]);
 			const tokens = (reader.getColumnsObjectJS().token as (string | null)[])
-  			.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
+				.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
 
 			if (!tokens || tokens.length === 0) {
-			return res.status(404).send("No tokens found for this user");
+				return res.status(404).send("No tokens found for this user");
 			}
 
 			// Tạo mảng messages (mỗi message cho 1 token)
 			const messages = tokens.map(token => ({
-			token,
-			notification: { title, body }
+				token,
+				notification: { title, body }
 			}));
 
 			// Gửi tất cả message
-			
+
 			const response = await admin.messaging().sendEach(messages);
 
 			console.log(`✅ Sent to ${response.successCount} devices, ❌ Failed: ${response.failureCount}`);
 			res.status(200).json({
-			success: true,
-			sent: response.successCount,
-			failed: response.failureCount
+				success: true,
+				sent: response.successCount,
+				failed: response.failureCount
 			});
 
 		} catch (err) {
@@ -274,11 +269,11 @@ async function main() {
 			const reader = await db.runAndReadAll(QUERY, [uid]);
 			// console.table(reader.getColumnsObjectJS());
 			const tokens = (reader.getColumnsObjectJS().token as (string | null)[])
-			.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
+				.filter((t): t is string => typeof t === "string" && t.trim().length > 0);
 
 			if (tokens.length === 0) {
-			console.log(`⚠ Không tìm thấy token cho uid ${uid}`);
-			return;
+				console.log(`⚠ Không tìm thấy token cho uid ${uid}`);
+				return;
 			}
 
 			// console.log(`token cho ${uid} là ${tokens.join(", ")}`);
@@ -291,7 +286,7 @@ async function main() {
 			// console.log(messages);
 
 			// Gửi qua Firebase Admin SDK
-			const response = await admin.messaging().sendEach(messages);	
+			const response = await admin.messaging().sendEach(messages);
 			console.log(response);
 
 			console.log(`✅ Đã gửi thông báo cho uid ${uid}`);
@@ -301,7 +296,7 @@ async function main() {
 	}
 
 	async function sendEmailToUser(uid: string, title: string, body: string) {
-		
+
 	}
 
 	// Gọi hàm test này mỗi 10 giây
@@ -314,10 +309,10 @@ async function main() {
 	// );
 	// }, 10_000);
 
-/* 
+	/*
 
-	
-*/
+
+	*/
 
 
 	app.listen(port, () => {
@@ -359,5 +354,5 @@ async function main() {
 
 
 }
-	
+
 main();
