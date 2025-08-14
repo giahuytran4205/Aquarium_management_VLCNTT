@@ -47,6 +47,24 @@ async function main() {
 	await createDatabase();
 	const db = await openDatabase();
 
+	function logAction(uid: string, message: string) {
+		const QUERY = `
+			INSERT INTO user_logs (uid, timestamp, message)
+				VALUES (?, CURRENT_TIMESTAMP, ?)
+			`;
+		db.run(QUERY, [uid, message])
+			.catch(console.error);
+	}
+	async function getActionLog(uid: string) {
+		const QUERY = `
+			SELECT timestamp, message FROM user_logs
+				WHERE uid = ?
+		`;
+		let result = await db.run(QUERY, [uid]);
+		let rows = await result.getRowObjectsJS();
+		return rows;
+	}
+
 	mq.on('connect', () => {
 		console.log('Connected to MQTT broker.');
 		mq.subscribe("aquarium/#");
@@ -63,9 +81,7 @@ async function main() {
 			`;
 			db.run(QUERY, [data.device_id, data.name, data.description])
 				.catch(console.error);
-		}
-
-		if (topic.endsWith('/sensors')) {
+		} else if (topic.endsWith('/sensors')) {
 			let { device_id, timestamp, temperature } = JSON.parse(message.toString());
 			timestamp /= 1000;
 
@@ -108,6 +124,10 @@ async function main() {
 	app.get('/', (req, res) => {
 		res.send("IoT backend server is running.");
 	});
+
+	app.get('/api/logs', checkAuth, async (req, res) => {
+		return getActionLog(req.auth!.uid);
+	})
 
 	app.get('/api/devices', checkAuth, async (req, res) => {
 		let QUERY = `
