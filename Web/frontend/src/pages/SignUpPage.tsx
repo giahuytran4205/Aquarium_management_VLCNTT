@@ -9,6 +9,7 @@ import LoaderCircle from "../components/LoaderCircle";
 import { Check, CircleX } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
+
 const auth = getAuth();
 
 export default function SignUpPage() {

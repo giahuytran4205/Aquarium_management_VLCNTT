@@ -8,6 +8,8 @@
 #include <Display.h>
 #include <PubSubClient.h>
 #include <ESP8266HTTPClient.h>
+#include "button.h"
+#include "feeder.h"
 
 // Cấu hình Wi-Fi
 const char *ssid = "Aquarium management AP";
@@ -48,9 +50,13 @@ void showAPQRCode() {
 	display.sendBuffer();
 }
 
+button A, B, C;
+Feeder MyFeeder;
+
 void setup() {
 	Serial.begin(115200);
 	
+	MyFeeder.init(D8);
 	// I2C setup
 	Wire.begin(D2, D1);
 	
@@ -63,7 +69,10 @@ void setup() {
 	
 	showAPQRCode();
 	// showInfo(display, "8/4/2025", "Monday", 20, true, "10:00AM", nullptr);
-
+	A.attach(D5);
+	B.attach(D7);
+	C.attach(D6);
+	// use pin 5 6 7, dont use pin d8 because input pulled to gnd
 	
 }
 
@@ -72,6 +81,40 @@ bool mqttConnecting = false;
 void loop() {
 	connectionConfig.loop();
 	mq.loop();
+	A.update();
+	B.update();
+	C.update();
+
+
+	if (B.isPress()) {
+		Serial.println("Pressing B");
+	}
+
+	
+	if (B.isPressFor(1000)) {
+		Serial.println("Pressing B and holding B");
+	}
+
+	
+	if (C.isPress()) {
+		Serial.println("Pressing C");
+	}
+
+	
+	if (C.isPressFor(1000)) {
+		Serial.println("Pressing C and holding C");
+		MyFeeder.feed(1);
+	}
+
+	if (A.isPress()) {
+		Serial.println("Pressing A");
+		MyFeeder.feed(2);
+	}
+
+	
+	if (A.isPressFor(1000)) {
+		Serial.println("Pressing A and holding A");
+	}
 
 	if (WiFi.status() == WL_CONNECTED) {
 		if (!mq.connected() && !mqttConnecting) {

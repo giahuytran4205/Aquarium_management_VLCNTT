@@ -15,6 +15,8 @@ import ProtectedRoute from "./ProtectedRoute";
 import LogOutPage from "../pages/LogOutPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
 import HomePageLayout from "../layouts/HomePageLayout";
+import ChatBotPage from "../pages/ChatbotPage";
+
 
 export const router = createBrowserRouter([
     {
@@ -52,7 +54,9 @@ export const router = createBrowserRouter([
                     { path: "/aquarium-status", element: <AquariumStatusPage /> },
                     { path: "/feeding", element: <FeedingPage /> },
                     { path: "/analysis", element: <AnalysisPage /> },
-                    { path: "/customize-widget", element: <CustomizeWidgetPage /> }
+                    { path: "/customize-widget", element: <CustomizeWidgetPage /> },
+                    { path: "/chatbot", element: <ChatBotPage /> }
+
                 ]
             },
             {
