@@ -6,13 +6,13 @@ import { useEffect, useState } from "react";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCBVeLPpt2PvafCImkZPdzSD7skUuXFVBQ",
-  authDomain: "aquarium-b645f.firebaseapp.com",
-  projectId: "aquarium-b645f",
-  storageBucket: "aquarium-b645f.firebasestorage.app",
-  messagingSenderId: "191975887333",
-  appId: "1:191975887333:web:cd31a3dc32980b14481f0c",
-  measurementId: "G-V4KK2CDKTS"
+    apiKey: "AIzaSyAWcAfNuADcWS0823_2iYnUaQYOy-kVHuo",
+    authDomain: "aquarium-app-d2b00.firebaseapp.com",
+    projectId: "aquarium-app-d2b00",
+    storageBucket: "aquarium-app-d2b00.firebasestorage.app",
+    messagingSenderId: "269471665026",
+    appId: "1:269471665026:web:45db3337c4d8d199b61d9b",
+    measurementId: "G-KDJ5EJRXS8"
 };
 
 export const app = initializeApp(firebaseConfig);
@@ -80,7 +80,6 @@ export async function requestFCMToken() {
 }
 
 const VAPID_KEY = "BPVCartrgjs0b7iBfjWWlihHlSw70FMyHIIRynFMoKufzCqJUO6LbfbnJ75VKYH-YTtPL2zxVDCjN8Wcuo7YkZM"
-
 
 export async function requestPermission() {
   try {

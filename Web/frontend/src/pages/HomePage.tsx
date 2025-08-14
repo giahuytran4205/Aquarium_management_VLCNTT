@@ -7,7 +7,6 @@ import { getAuth } from "firebase/auth";
 import { addDevice, changeDeviceInfo, deleteDevice, getDevices } from "../hooks/devices";
 import Dialog from "../components/Dialog";
 import Input from "../components/Input";
-import { flushSync } from "react-dom";
 
 export default function HomePage() {
     const [isOpenScanner, setIsOpenScanner] = useState(false);

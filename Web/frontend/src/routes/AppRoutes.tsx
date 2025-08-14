@@ -14,8 +14,8 @@ import ChangePasswordPage from "../pages/ChangePasswordPage";
 import ProtectedRoute from "./ProtectedRoute";
 import LogOutPage from "../pages/LogOutPage";
 import ForgotPasswordPage from "../pages/ForgotPasswordPage";
-import HomePageLayout from "../layouts/HomePageLayout";
 import ChatBotPage from "../pages/ChatbotPage";
+import DeviceManagerLayout from "../layouts/DeviceManagerLayout";
 
 
 export const router = createBrowserRouter([
@@ -51,21 +51,16 @@ export const router = createBrowserRouter([
                             { path: "change-password", element: <ChangePasswordPage /> },
                         ]
                     },
-                    { path: "/aquarium-status", element: <AquariumStatusPage /> },
-                    { path: "/feeding", element: <FeedingPage /> },
-                    { path: "/analysis", element: <AnalysisPage /> },
-                    { path: "/customize-widget", element: <CustomizeWidgetPage /> },
-                    { path: "/chatbot", element: <ChatBotPage /> }
-
+                    { path: "/home", element: <HomePage /> },
+                    { path: "/", element: <DeviceManagerLayout />, children: [
+                        { path: "/aquarium-status", element: <AquariumStatusPage /> },
+                        { path: "/feeding", element: <FeedingPage /> },
+                        { path: "/analysis", element: <AnalysisPage /> },
+                        { path: "/customize-widget", element: <CustomizeWidgetPage /> },
+                        { path: "/chatbot", element: <ChatBotPage /> }
+                    ]}
                 ]
             },
-            {
-                path: "/home",
-                element: <HomePageLayout />,
-                children: [
-                    { index: true, element: <HomePage /> }    
-                ]
-            }
         ]
     },
     {

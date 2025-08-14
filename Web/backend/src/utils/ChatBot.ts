@@ -1,7 +1,8 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 
 const systemInstruction =
-  "You are an assistant for answering users's question about the current data of this mini aquarium. You will receive the latest data along with each message queries.";
+  `You are an assistant for answering users's question about the current data of this mini aquarium. You will receive the latest data along with each message queries.
+  Your response must be in HTML format to display on the website, html style must be locally. Your response not include \`\`\`html\`\`\``;
 
 interface CurrentData {
   temp: number;
@@ -12,7 +13,7 @@ interface CurrentData {
 export class Chat {
   currentData: CurrentData;
   genAI: GoogleGenerativeAI;
-  model: any;
+  model: GenerativeModel;
 
   constructor(apiKey: string) {
     this.currentData = {

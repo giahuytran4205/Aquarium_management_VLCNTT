@@ -20,12 +20,27 @@ const userMenuList = [
     { path: "/auth/log-out", name: "Log out" },
 ]
 
-export default function MainLayout() {
+export default function DeviceManagerLayout() {
+    const { devices, refetch } = getDevices();
+
     return (
-        <div className="main-layout">
-            <Background />
-            <AppBar navList={navList} userMenuList={userMenuList} />
+        <>
+            <div style={{
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                margin: "20px 10px 10px 10px"
+            }}>
+                <span className="title">Select device</span>
+                <select className="glassmorphism dropdown">
+                    {devices.map((value, index) => 
+                        <option key={index} value={value.device_id}>
+                            {value.name}
+                        </option>
+                    )}
+                </select>
+            </div>
             <Outlet />
-        </div>
+        </>
     );
 }
