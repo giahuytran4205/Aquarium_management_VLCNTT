@@ -8,6 +8,8 @@ import router from "./routes/user";
 import { createDatabase } from "./database/init";
 import { DecodedIdToken } from "firebase-admin/lib/auth/token-verifier";
 import { Resend } from 'resend';
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import { Chat } from "./utils/ChatBot";
 
 const serviceAccount: admin.ServiceAccount = require("./aquarium-b645f-firebase-adminsdk-fbsvc-6d85df98dc.json");
 
@@ -21,13 +23,20 @@ declare global {
 
 dotenv.config();
 
-const resend = new Resend(process.env.RESEND_KEY);
 const app = express();
 const port = process.env.PORT || 5000;
 const mq = mqtt.connect('mqtt://broker.hivemq.com');
 admin.initializeApp({
-  	credential: admin.credential.cert(serviceAccount),
+	credential: admin.credential.cert(serviceAccount),
 });
+
+const API_KEY = process.env.GEMINI_KEY || "YOUR_API_KEY"; // Replace with your actual API key
+const RESEND_KEY = process.env.RESEND_KEY || "YOUR_RESEND_KEY"
+
+const resend = new Resend(RESEND_KEY);
+const genAI = new GoogleGenerativeAI(API_KEY);
+const chatBot = new Chat(API_KEY);
+
 
 async function checkAuth(req: Request, res: Response, next: NextFunction) {
   	const idToken = req.headers.authorization?.split("Bearer ")[1];
@@ -266,6 +275,26 @@ async function main() {
 		}
 	});
 
+	app.post("/api/ask", checkAuth, async (req, res) => {
+	try {
+		const { message, history } = req.body;
+
+		if (!message) {
+		return res.status(400).json({ error: "Missing 'message' in request body" });
+		}
+
+		// Tạm thời dùng dữ liệu cảm biến mẫu
+		chatBot.updateData(26.5, 78, true);
+
+		// Gọi AI và lấy lịch sử mới
+		const newHistory = await chatBot.chat(message, history || []);
+
+		res.json({ history: newHistory });
+	} catch (error) {
+		console.error("Error in /api/ask:", error);
+		res.status(500).json({ error: "Internal server error" });
+	}
+	});
 
 	async function sendNotificationToUser(uid: string, title: string, body: string) {
 		try {

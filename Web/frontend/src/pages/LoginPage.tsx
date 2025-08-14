@@ -55,7 +55,7 @@ export default function LoginPage() {
 
             if (fcmToken) {
                 // Gửi token này lên backend
-                await fetch(`http://192.168.1.19:3000/api/save-fcm-token`, {
+                await fetch(`http://localhost:3000/api/save-fcm-token`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
