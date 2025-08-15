@@ -3,10 +3,8 @@ import "../assets/styles/global.css";
 import "./MainLayout.css";
 import Background from "../components/Background";
 import AppBar from "../components/AppBar";
-import { getDevices } from "../hooks/devices";
 
 const navList = [
-    { path: "/home", name: "Home" },
     { path: "/aquarium-status", name: "Aquarium status" },
     { path: "/feeding", name: "Feeding" },
     { path: "/analysis", name: "Analysis" },
@@ -15,7 +13,6 @@ const navList = [
 ]
 
 const userMenuList = [
-    { path: "/user/profile", name: "Profile" },
     { path: "/user/change-password", name: "Change password" },
     { path: "/auth/log-out", name: "Log out" },
 ]

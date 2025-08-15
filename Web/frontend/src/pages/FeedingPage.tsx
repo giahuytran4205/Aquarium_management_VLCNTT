@@ -2,13 +2,17 @@ import { Plus } from "lucide-react";
 import Button from "../components/Button";
 import "./FeedingPage.css"
 import Toggle from "../components/Toggle";
+import { useState } from "react";
+import { requestFeed } from "../utils/api";
 
 export default function FeedingPage() {
-    const devices = Array.from({ length: 10 }, (_, k) => ({ name: "Device " + k, id: k }));
     const schedules = Array.from({ length: 5 }, (_, k) => ({ time: "10:00AM", on: k % 2 === 0 ? true : false }));
+    const [feedAmount, setFeedAmount] = useState(10);
 
     function handleFeeding(e: React.MouseEvent) {
-
+        requestFeed(feedAmount)
+            .then(() => console.log("Feed request sent successfully."))
+            .catch(alert);
     }
 
     function handleAddSchedule(e: React.MouseEvent) {
@@ -21,7 +25,8 @@ export default function FeedingPage() {
                 <label className="amount-input">
                     <span className="title">Amount of foods</span>
                     <div>
-                        <input type="number" />
+                        <input type="number" value={feedAmount}
+                            onChange={(e) => setFeedAmount(Number(e.target.value))} />
                         <span className="unit">g</span>
                     </div>
                 </label>
@@ -42,11 +47,11 @@ export default function FeedingPage() {
             <div className="second-part glassmorphism">
                 <span className="title">Feeding scheduling</span>
                 <Button onClick={handleAddSchedule} className="add-btn">
-                    <Plus size={16}/>
+                    <Plus size={16} />
                     <span>Add</span>
                 </Button>
                 <div className="schedules">
-                    {schedules.map((value, index) => 
+                    {schedules.map((value, index) =>
                         <div className="item" key={index}>
                             <span>{value.time}</span>
                             <Toggle />

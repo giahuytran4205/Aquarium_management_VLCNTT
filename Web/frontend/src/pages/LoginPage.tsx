@@ -45,35 +45,37 @@ export default function LoginPage() {
 
         setState("pending");
         await signInWithEmailAndPassword(auth, email, password)
-        .then(async (userCredential) => {
-            // Signed in
-            setState("success");
-            // alert("login ok");
+            .then(async (userCredential) => {
+                // Signed in
+                setState("success");
+                // alert("login ok");
 
-            const fcmToken = await requestPermission();
-            // alert(fcmToken);
+                const fcmToken = await requestPermission();
+                // alert(fcmToken);
+                console.log(fcmToken);
 
-            if (fcmToken) {
-                // Gửi token này lên backend
-                await fetch(`http://localhost:3000/api/save-fcm-token`, {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json",
-                    Authorization: `Bearer ${await userCredential.user.getIdToken()}`
-                },
-                body: JSON.stringify({ fcmToken })
-                });
-            }
+                if (fcmToken) {
+                    // Gửi token này lên backend
+                    await fetch(`http://localhost:3000/api/save-fcm-token`, {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            Authorization: `Bearer ${await userCredential.user.getIdToken()}`
+                        },
+                        body: JSON.stringify({ fcmToken })
+                    });
+                    console.log("Sent");
+                }
 
-            navigate("/home");
-        })
-        .catch((error) => {
-            setState("error");
-            if (error instanceof FirebaseError && error.code === "auth/invalid-credential")
-                setMessage("Wrong email or password. Please try again.");
-            else
-                setMessage("Error! Please try again.");
-        });
+                navigate("/aquarium-status");
+            })
+            .catch((error) => {
+                setState("error");
+                if (error instanceof FirebaseError && error.code === "auth/invalid-credential")
+                    setMessage("Wrong email or password. Please try again.");
+                else
+                    setMessage("Error! Please try again.");
+            });
     }
 
     function handleFocus(e: React.FocusEvent) {
@@ -97,7 +99,7 @@ export default function LoginPage() {
                     Processing
                 </>
             );
-            showNotification({ children: children, style: {gap: "10px"} });
+            showNotification({ children: children, style: { gap: "10px" } });
         }
         if (state === "success") {
             setState("idle");
@@ -107,8 +109,8 @@ export default function LoginPage() {
                     Logged in
                 </>
             )
-            showNotification({ children: children, duration: 1000, style: {gap: "10px"} });
-            
+            showNotification({ children: children, duration: 1000, style: { gap: "10px" } });
+
         }
         if (state === "error") {
             const children = (
@@ -117,7 +119,7 @@ export default function LoginPage() {
                     Error
                 </>
             )
-            showNotification({ children: children, duration: 1000, style: {gap: "10px"} });
+            showNotification({ children: children, duration: 1000, style: { gap: "10px" } });
         }
     }
 

@@ -1,36 +1,45 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import "./AquariumStatusPage.css"
+import { getActionLog, getAquariumStatus, getSchedule, requestPump, type AquariumStatus, type LogEntry, type ScheduleEntry } from "../utils/api";
+import { formatTime } from "../utils/format";
+import Button from "../components/Button";
 
 export default function AquariumStatusPage() {
-    const [time, setTime] = useState("12:00AM");
-    const [date, setDate] = useState("31/7/2025");
-    const [temp, setTemp] = useState("25 C");
+    const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+    const [logs, setLogs] = useState<LogEntry[]>([]);
+    const [status, setStatus] = useState<AquariumStatus>();
 
-    const feedingSchedules = Array.from({ length: 5 }, (_, k) => ({ time: "12:00AM", amount: k }));
+    function update() {
+        getSchedule().then(setSchedule);
+        getActionLog().then(setLogs);
+        getAquariumStatus().then(setStatus);
+    };
+    useEffect(() => {
+        const timer = setTimeout(update, 5000);
+        update();
+        return () => clearInterval(timer);
+    }, []);
+
+    function handleTogglePump() {
+        requestPump(!status?.pumpRunning);
+    }
 
     return (
         <div className="aquarium-status-page">
-            <div className="first-part glassmorphism">
-                <div className="time">
-                    {time}
-                </div>
-                <div className="temp-date">
-                    <div className="temp">
-                        {temp}
-                    </div>
-                    <div className="date">
-                        {date}
-                    </div>
-                </div>
-            </div>
             <div className="second-part glassmorphism">
                 <div className="oxygen">
                     <p>Oxygen aeration</p>
-                    <p style={{ color: "rgba(49, 251, 82, 1)" }}>Running</p>
+                    <Button className="padding"
+                        onClick={() => handleTogglePump()}>
+                        {status?.pumpRunning ?
+                            <span>Running</span> :
+                            <span>Stopped</span>
+                        }
+                    </Button>
                 </div>
                 <div className="water-temp">
                     <p>Water temperature</p>
-                    <p style={{ color: "rgba(32, 235, 253, 1)" }}>25 C</p>
+                    <p style={{ color: "rgba(32, 235, 253, 1)" }}>{status?.temperature} C</p>
                 </div>
                 <div className="feeding-status">
                     Feeding status
@@ -39,21 +48,38 @@ export default function AquariumStatusPage() {
                             <tr>
                                 <th>Time</th>
                                 <th>Amount</th>
-                                <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {feedingSchedules.map((value, index) => 
+                            {schedule.map((value, index) =>
                                 <tr key={index}>
-                                    <td>{value.time}</td>
-                                    <td>{value.amount}</td>
-                                    <td><input type="checkbox" /></td>
+                                    <td>{formatTime(value.hour, value.minute)}</td>
+                                    <td>{value.amount}g</td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
             </div>
+            <div className="second-part glassmorphism">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Time</th>
+                            <th>Message</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {logs.map(({ timestamp, message }, index) =>
+                            <tr key={index}>
+                                <td>{timestamp.toLocaleString('en-US')}</td>
+                                <td>{message}</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
         </div>
+
     );
 }

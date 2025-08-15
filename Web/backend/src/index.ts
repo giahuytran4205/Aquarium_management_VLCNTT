@@ -4,14 +4,13 @@ import dotenv from "dotenv";
 import { openDatabase } from "./utils/DuckDB";
 import mqtt from "mqtt";
 import admin from "firebase-admin"
-import router from "./routes/user";
 import { createDatabase } from "./database/init";
 import { DecodedIdToken } from "firebase-admin/lib/auth/token-verifier";
 import { Resend } from 'resend';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Chat } from "./utils/ChatBot";
 
-const serviceAccount: admin.ServiceAccount = require("./aquarium-app-d2b00-firebase-adminsdk-fbsvc-8979b80bd4.json");
+const serviceAccount: admin.ServiceAccount = require("./firebase-service-account.json");
 
 declare global {
 	namespace Express {
@@ -30,6 +29,7 @@ admin.initializeApp({
 	credential: admin.credential.cert(serviceAccount),
 });
 
+const TOPIC = "aquarium1b3d5f";
 const API_KEY = process.env.GEMINI_KEY || "YOUR_API_KEY"; // Replace with your actual API key
 const RESEND_KEY = process.env.RESEND_KEY || "YOUR_RESEND_KEY"
 
@@ -37,6 +37,15 @@ const resend = new Resend(RESEND_KEY);
 const genAI = new GoogleGenerativeAI(API_KEY);
 const chatBot = new Chat(API_KEY);
 
+type AquariumStatus = {
+	pumpRunning: boolean
+	temperature: number
+};
+
+let aquariumStatus: AquariumStatus = {
+	pumpRunning: true,
+	temperature: -1
+};
 
 async function checkAuth(req: Request, res: Response, next: NextFunction) {
 	const idToken = req.headers.authorization?.split("Bearer ")[1];
@@ -56,60 +65,60 @@ async function main() {
 	await createDatabase();
 	const db = await openDatabase();
 
-	function logAction(uid: string, message: string) {
+	function logAction(message: string) {
 		const QUERY = `
-			INSERT INTO user_logs (uid, timestamp, message)
-				VALUES (?, CURRENT_TIMESTAMP, ?)
+			INSERT INTO action_logs (timestamp, message)
+				VALUES (CURRENT_TIMESTAMP, ?)
 			`;
-		db.run(QUERY, [uid, message])
+		db.run(QUERY, [message])
 			.catch(console.error);
 	}
-	async function getActionLog(uid: string) {
+	async function getActionLog() {
 		const QUERY = `
-			SELECT timestamp, message FROM user_logs
-				WHERE uid = ?
+			SELECT timestamp, message FROM action_logs
 		`;
-		let result = await db.run(QUERY, [uid]);
+		let result = await db.run(QUERY);
 		let rows = await result.getRowObjectsJS();
 		return rows;
 	}
 
+	function requestFeed(grams: number) {
+		mq.publish(`${TOPIC}/command/feed`, grams.toFixed(0));
+	}
+	function requestPump(on: boolean) {
+		mq.publish(`${TOPIC}/command/pump`, on ? "on" : "off");
+	}
+
 	mq.on('connect', () => {
 		console.log('Connected to MQTT broker.');
-		mq.subscribe("aquarium/#");
+		mq.subscribe("aquarium1b3d5f/data/#");
 	});
 	mq.on('message', async (topic, message) => {
-		const topicParts = topic.split('/');
-
-		if (topic.endsWith("/register")) {
-			const data = JSON.parse(message.toString());
-			console.log(data);
-			const QUERY = `
-				INSERT INTO devices (device_id, name, description)
-				VALUES (?, ?, ?)
-			`;
-			db.run(QUERY, [data.device_id, data.name, data.description])
-				.catch(console.error);
-		} else if (topic.endsWith('/sensors')) {
-			let { device_id, timestamp, temperature } = JSON.parse(message.toString());
+		if (topic.endsWith('/sensors')) {
+			let { timestamp, temperature, pumpRunning } = JSON.parse(message.toString());
 			timestamp /= 1000;
 
-			// console.log(JSON.parse(message.toString()));
+			aquariumStatus.temperature = temperature;
 
 			const QUERY = `
-				INSERT INTO device_logs (device_id, timestamp, temperature)
-				VALUES (?, TO_TIMESTAMP(?), ?)
+				INSERT INTO device_logs (timestamp, temperature)
+				VALUES (TO_TIMESTAMP(?), ?)
 			`;
-			db.run(QUERY, [device_id, timestamp, temperature])
+			db.run(QUERY, [timestamp, temperature])
 				.catch(console.error);
+		} else if (topic.endsWith('/power')) {
+			logAction(`ESP powered ${message.toString()}.`)
+		} else if (topic.endsWith('/pump')) {
+			logAction(`Oxygen pump powered ${message.toString()}.`)
+			aquariumStatus.pumpRunning = message.toString() === "on";
+		} else if (topic.endsWith('/feed')) {
+			logAction(`Dispensed ${message.toString()}g of food.`);
 		}
 	});
 
 
 	app.use(cors());
 	app.use(express.json());
-
-	app.use("/api/users", router);
 
 	app.post("/api/save-fcm-token", checkAuth, async (req, res) => {
 		const { fcmToken } = req.body;
@@ -134,120 +143,95 @@ async function main() {
 		res.send("IoT backend server is running.");
 	});
 
-	app.get('/api/logs', checkAuth, async (req, res) => {
-		return getActionLog(req.auth!.uid);
-	})
+	app.get('/api/logs', async (req, res) => {
+		res.json(await getActionLog());
+	});
 
-	app.get('/api/devices', checkAuth, async (req, res) => {
+	app.get('/api/device/data', async (req, res) => {
 		let QUERY = `
-			SELECT devices.* FROM devices 
-			JOIN user_devices ON devices.device_id = user_devices.device_id
-			WHERE uid = ?
+		WITH days AS (
+			SELECT generate_series(
+				date_trunc('day', NOW() - INTERVAL ? DAY),
+				date_trunc('day', NOW()),
+				INTERVAL 1 DAY
+			) AS timestamp
+		)
+		SELECT
+			days.timestamp,
+			MIN(l.temperature) AS min_temp,
+			MAX(l.temperature) AS max_temp
+		FROM days
+		LEFT JOIN device_logs l
+			ON date_trunc('day', l.timestamp) = days.timestamp
+		GROUP BY days.day
+		ORDER BY days.day;
 		`;
-		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null]);
-		// console.log(reader.getColumnsObjectJS());
+		let reader = await db.runAndReadAll(QUERY);
+
+		res.json(reader.getColumnsObjectJS());
+	});
+
+	app.get('/api/device/schedule', async (req, res) => {
+		let QUERY = `
+			SELECT hour, minute, amount
+			FROM feed_times
+			ORDER BY hour, minute DESC;
+		`;
+		let reader = await db.runAndReadAll(QUERY);
 
 		res.json(reader.getRowObjectsJS());
 	});
 
-	app.post("/api/devices", checkAuth, async (req, res) => {
-		const QUERY = `INSERT INTO user_devices VALUES (?, ?)`;
-
-		try {
-			await db.run(QUERY, [req.auth?.uid, req.body.device_id]);
-
-			res.status(201).send("Device has been added successfully");
-		} catch (e: any) {
-			console.error("Error when insert into user_devices:", e.message);
-			res.status(200).send("Device is already added");
-		}
+	app.get('/api/device/current', async (req, res) => {
+		res.json(aquariumStatus);
 	});
 
-	app.get('/api/device', checkAuth, async (req, res) => {
-		const QUERY = `
-			SELECT * FROM devices
-			WHERE device_id = ?
+	app.post('/api/device/schedule', async (req, res) => {
+		const { hour, minute, amount } = req.body;
+		if (hour === undefined || minute === undefined || amount == undefined)
+			return res.status(400).send("Missing time and amount.")
+		let QUERY = `
+			INSERT INTO feed_times (hour, minute, amount)
+			VALUES (?, ?, ?)
+			ON CONFLICT DO UPDATE
+				SET amount = EXCLUDED.amount;
 		`;
-		try {
-			const reader = await db.runAndRead(QUERY, [req.body.device_id]);
-			res.json(reader.getRowObjectsJS());
-		}
-		catch (e: any) {
-			res.status(404);
-			console.error("Error when get device infomation: ", e.message);
-		}
+		let reader = await db.runAndReadAll(QUERY, [hour, minute, amount]);
+
+		logAction(`Added feeding at ${hour}:${minute}`);
+
+		res.json(reader.getRowObjectsJS());
 	});
 
-	app.put('/api/device', checkAuth, async (req, res) => {
-		const QUERY = `
-			UPDATE devices
-			SET name = ?,
-				description = ?
-			WHERE device_id = ? AND device_id IN (
-				SELECT device_id FROM user_devices
-				WHERE uid = ?
-			)
-		`;
-		try {
-			await db.run(QUERY, [req.body.name, req.body.description, req.body.device_id, req.auth?.uid]);
-			res.status(200);
-		}
-		catch (e) {
-			res.status(400);
-			console.error("Error when update device information: ", e);
-		}
-	});
-
-	app.delete('/api/device', checkAuth, async (req, res) => {
-		const QUERY = `
-			DELETE FROM user_devices
-			WHERE uid = ? AND device_id = ?
-		`;
-		try {
-			await db.run(QUERY, [req.auth?.uid || null, req.body.device_id]);
-			res.status(200);
-		}
-		catch (e: any) {
-			res.status(404);
-			console.error("Error when DELETE device from table user_devices: ", e.message);
-		}
-	});
-
-	app.post('/api/device/start', checkAuth, async (req, res) => {
-
-	});
-
-	app.post('/api/device/stop', checkAuth, async (req, res) => {
-
-	});
-
-	app.post('/api/device/config', checkAuth, async (req, res) => {
-
-	});
-
-	app.get('/api/device/data', checkAuth, async (req, res) => {
-		const limit = 50;
+	app.delete('/api/device/schedule', async (req, res) => {
+		const { hour, minute } = req.body;
+		if (hour === undefined || minute == undefined)
+			return res.status(400).send('Time is missing.');
 
 		let QUERY = `
-			SELECT * FROM user_devices
-			WHERE uid = ? AND device_id = ?
+			DELETE FROM feed_times
+			WHERE hour = ? AND minute = ?;
 		`;
-		let reader = await db.runAndReadAll(QUERY, [req.auth?.uid || null, req.body.device_id]);
+		let reader = await db.runAndReadAll(QUERY, [hour, minute]);
 
-		if (reader.getRowsJS().length === 0) {
-			res.status(404);
-			return;
-		}
-
-		QUERY = `
-			SELECT timestamp, temperature FROM device_logs
-			WHERE device_id = ?
-			ORDER BY timestamp DESC
-			LIMIT ?
-		`;
-		reader = await db.runAndReadAll(QUERY, [req.params.device_id, limit]);
+		logAction(`Deleted feeding at ${hour}:${minute}`);
 
 		res.json(reader.getColumnsObjectJS());
+	});
+
+	app.post('/api/device/feed', async (req, res) => {
+		const { amount } = req.body;
+		if (amount == undefined)
+			return res.status(400).send("Missing amount.")
+		requestFeed(amount);
+		res.sendStatus(200);
+	});
+	app.post('/api/device/pump', async (req, res) => {
+		const { on } = req.body;
+		if (on == undefined)
+			return res.status(400).send("Missing status.")
+		requestPump(on);
+		res.sendStatus(200);
 	});
 
 	app.post("/api/send-notification", async (req, res) => {
@@ -291,24 +275,24 @@ async function main() {
 	});
 
 	app.post("/api/ask", checkAuth, async (req, res) => {
-	try {
-		const { message, history } = req.body;
+		try {
+			const { message, history } = req.body;
 
-		if (!message) {
-		return res.status(400).json({ error: "Missing 'message' in request body" });
+			if (!message) {
+				return res.status(400).json({ error: "Missing 'message' in request body" });
+			}
+
+			// Tạm thời dùng dữ liệu cảm biến mẫu
+			chatBot.updateData(26.5, 78, true);
+
+			// Gọi AI và lấy lịch sử mới
+			const newHistory = await chatBot.chat(message, history || []);
+
+			res.json({ history: newHistory });
+		} catch (error) {
+			console.error("Error in /api/ask:", error);
+			res.status(500).json({ error: "Internal server error" });
 		}
-
-		// Tạm thời dùng dữ liệu cảm biến mẫu
-		chatBot.updateData(26.5, 78, true);
-
-		// Gọi AI và lấy lịch sử mới
-		const newHistory = await chatBot.chat(message, history || []);
-
-		res.json({ history: newHistory });
-	} catch (error) {
-		console.error("Error in /api/ask:", error);
-		res.status(500).json({ error: "Internal server error" });
-	}
 	});
 
 	async function sendNotificationToUser(uid: string, title: string, body: string) {
