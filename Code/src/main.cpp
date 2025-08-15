@@ -10,6 +10,7 @@
 #include <ESP8266HTTPClient.h>
 #include "button.h"
 #include "feeder.h"
+#include <scheduler.h>
 
 // Cấu hình Wi-Fi
 const char *ssid = "Aquarium management AP";
@@ -30,6 +31,8 @@ HTTPClient httpClient;
 WiFiClient wifiClient;
 PubSubClient mq(wifiClient);
 
+Scheduler scheduler;
+
 // QR scale
 #define QR_SCALE 2
 
@@ -47,6 +50,14 @@ void setupMQTT() {
 	mq.setServer("broker.hivemq.com", 1883);
   	mq.setCallback(mqttCallback);
 }
+void setupTime() {
+	// UTC+7 (Vietnam HCM)
+	Serial.println("Setting up time configuration...");
+	configTime(7 * 3600, 0, "pool.ntp.org");
+	delay(5000);
+	if (get_current_time_ms() < 1655265147604LL)
+		Serial.println("NTP sync delay timeout. Timestamp may be wrong.");
+}
 
 void showAPQRCode() {
 	display.clear();
@@ -59,6 +70,17 @@ void showAPQRCode() {
 button A, B, C;
 Feeder MyFeeder;
 
+void startFeed(int grams) {
+	MyFeeder.feed(grams);
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/feed").c_str(), String(grams).c_str());
+}
+void controlPump(bool on) {
+	// ...
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/pump").c_str(), on ? "on" : "off");
+}
+
 void setup() {
 	Serial.begin(115200);
 	
@@ -68,6 +90,10 @@ void setup() {
 	
 	display.begin();
 	display.clearBuffer();
+
+	scheduler.add(12, 30, []() { // run at 12:30 every day
+		startFeed(10);
+	});
 
 	setupMQTT();
 	
@@ -82,25 +108,14 @@ void setup() {
 	
 }
 
-void startFeed(int grams) {
-	MyFeeder.feed(grams);
-	if (mq.connected())
-		mq.publish((TOPIC + "/data/feed").c_str(), String(grams).c_str());
-}
-void controlPump(bool on) {
-	// ...
-	if (mq.connected())
-		mq.publish((TOPIC + "/data/pump").c_str(), on ? "on" : "off");
-}
-
 int timer = 0;
 void loop() {
 	connectionConfig.loop();
 	mq.loop();
+	scheduler.loop();
 	A.update();
 	B.update();
 	C.update();
-
 
 	if (B.isPress()) {
 		Serial.println("Pressing B");
@@ -138,8 +153,10 @@ void loop() {
 			bool res = mq.connect(clientId.c_str());
 			Serial.print("Connection to MQTTT: ");
 			Serial.println(res);
-			if (timer == 0) // first start
+			if (timer == 0) { // first start
 				mq.publish((TOPIC + "/data/power").c_str(), "on");
+				setupTime();
+			}
 		}
 		if (mq.connected()) {
 			timer++;
