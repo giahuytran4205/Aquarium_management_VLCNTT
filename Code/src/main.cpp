@@ -15,7 +15,13 @@
 const char *ssid = "Aquarium management AP";
 const char *password = "MatKhauWifi";
 
-String topicHead = "aquarium/" + String(system_get_chip_id());
+const String TOPIC = "aquarium1b3d5f";
+
+uint64_t get_current_time_ms() {
+  struct timeval tv;
+  gettimeofday(&tv, nullptr);
+  return (uint64_t)tv.tv_sec * 1000 + (uint64_t)tv.tv_usec / 1000;
+}
 
 // Web server
 ESP8266WebServer server(80);
@@ -76,8 +82,18 @@ void setup() {
 	
 }
 
-int t = 0;
-bool mqttConnecting = false;
+void startFeed(int grams) {
+	MyFeeder.feed(grams);
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/feed").c_str(), String(grams).c_str());
+}
+void controlPump(bool on) {
+	// ...
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/pump").c_str(), on ? "on" : "off");
+}
+
+int timer = 0;
 void loop() {
 	connectionConfig.loop();
 	mq.loop();
@@ -103,12 +119,12 @@ void loop() {
 	
 	if (C.isPressFor(1000)) {
 		Serial.println("Pressing C and holding C");
-		MyFeeder.feed(1);
+		startFeed(1);
 	}
 
 	if (A.isPress()) {
 		Serial.println("Pressing A");
-		MyFeeder.feed(2);
+		startFeed(2);
 	}
 
 	
@@ -117,46 +133,27 @@ void loop() {
 	}
 
 	if (WiFi.status() == WL_CONNECTED) {
-		if (!mq.connected() && !mqttConnecting) {
-			mqttConnecting = true;
+		if (!mq.connected()) {
 			String clientId = "esp8266-" + String(ESP.getChipId());
 			bool res = mq.connect(clientId.c_str());
-			Serial.print("Res ");
+			Serial.print("Connection to MQTTT: ");
 			Serial.println(res);
+			if (timer == 0) // first start
+				mq.publish((TOPIC + "/data/power").c_str(), "on");
 		}
-		else if (t == 0) {
-			Serial.println("MQTT đã kết nối!");
-			t++;
-			// httpClient.begin(wifiClient, "http://192.168.1.73:3000/register/");
-			// httpClient.addHeader("Content-Type", "application/json");
-			
-			// String json = "{\"device_id\": " + String(system_get_chip_id()) + " }";
-			// int httpCode = httpClient.POST(json);
-			
-			// if (httpCode > 0) {
-			// 	String payload = httpClient.getString();
-			// 	Serial.println(payload);
-			// } else {
-			// 	Serial.printf("Lỗi POST, mã: %d\n", httpCode);
-			// }
-			
-			mq.publish("aquarium/register",
+		if (mq.connected()) {
+			timer++;
+			if (timer % 5 == 0) { // run every 5 seconds
+				mq.publish((TOPIC + "/data/sensors").c_str(),
 				(R"(
 					{
-						"device_id": )" + String(system_get_chip_id()) + R"(,
-						"name": "",
-						"description": ""
+						"timestamp": )" + String(get_current_time_ms()) + R"(,
+						"temperature": )" + String(123) + R"(,
+						"pumpRunning": )" + (true ? "true" : "false") + R"(
 					}
 				)").c_str());
-
-			mq.publish("aquarium/sensors",
-				(R"(
-					{
-						"device_id": )" + String(system_get_chip_id()) + R"(,
-						"timestamp": 12334354,
-						"temperature": 25
-					}
-				)").c_str());
+			}
 		}
 	}
+	delay(1000);
 }
