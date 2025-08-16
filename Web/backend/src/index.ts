@@ -112,7 +112,15 @@ async function main() {
 			logAction(`Oxygen pump powered ${message.toString()}.`)
 			aquariumStatus.pumpRunning = message.toString() === "on";
 		} else if (topic.endsWith('/feed')) {
-			logAction(`Dispensed ${message.toString()}g of food.`);
+			let amount = Number(message.toString());
+			logAction(`Dispensed ${amount}g of food.`);
+
+			const QUERY = `
+				INSERT INTO feed_logs (timestamp, amount)
+				VALUES (CURRENT_TIMESTAMP, ?)
+			`;
+			db.run(QUERY, [amount])
+				.catch(console.error);
 		}
 	});
 
@@ -147,28 +155,49 @@ async function main() {
 		res.json(await getActionLog());
 	});
 
-	app.get('/api/device/data', async (req, res) => {
+	app.post('/api/device/history', async (req, res) => {
+		const limit = Number(req.body?.limit) || 15;
 		let QUERY = `
-		WITH days AS (
-			SELECT generate_series(
-				date_trunc('day', NOW() - INTERVAL ? DAY),
-				date_trunc('day', NOW()),
-				INTERVAL 1 DAY
-			) AS timestamp
-		)
-		SELECT
-			days.timestamp,
-			MIN(l.temperature) AS min_temp,
-			MAX(l.temperature) AS max_temp
-		FROM days
-		LEFT JOIN device_logs l
-			ON date_trunc('day', l.timestamp) = days.timestamp
-		GROUP BY days.day
-		ORDER BY days.day;
+			SELECT
+				date_trunc('day', l.timestamp)::DATE AS date,
+				MIN(l.temperature) AS minTemp,
+				MAX(l.temperature) AS maxTemp
+			FROM device_logs l
+			WHERE l.timestamp >= NOW() - INTERVAL '${limit} days'
+			GROUP BY date
+			ORDER BY date;
 		`;
 		let reader = await db.runAndReadAll(QUERY);
 
 		res.json(reader.getColumnsObjectJS());
+	});
+	app.post('/api/device/feedhistory', async (req, res) => {
+		const limit = Number(req.body?.limit) || 15;
+		let QUERY = `
+			SELECT
+				date_trunc('day', l.timestamp)::DATE AS date,
+				SUM(l.amount) AS amount,
+			FROM feed_logs l
+			WHERE l.timestamp >= NOW() - INTERVAL '${limit} days'
+			GROUP BY date
+			ORDER BY date;
+		`;
+		let reader = await db.runAndReadAll(QUERY);
+
+		res.json(reader.getColumnsObjectJS());
+	});
+
+	app.get('/api/device/today', async (req, res) => {
+		const limit = Number(req.body?.limit) || 15;
+		let QUERY = `
+			SELECT
+				COALESCE(SUM(l.amount), 0) AS feedAmount,
+			FROM feed_logs l
+			WHERE l.timestamp >= NOW() - INTERVAL '1 days';
+		`;
+		let reader = await db.runAndReadAll(QUERY);
+
+		res.json(reader.getRowObjectsJS()[0]);
 	});
 
 	app.get('/api/device/schedule', async (req, res) => {
