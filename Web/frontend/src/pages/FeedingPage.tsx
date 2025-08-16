@@ -2,12 +2,17 @@ import { Plus } from "lucide-react";
 import Button from "../components/Button";
 import "./FeedingPage.css"
 import Toggle from "../components/Toggle";
-import { useState } from "react";
-import { requestFeed } from "../utils/api";
+import { useEffect, useState } from "react";
+import { type AquariumOverview, requestFeed, getAquariumOverview } from "../utils/api";
 
 export default function FeedingPage() {
     const schedules = Array.from({ length: 5 }, (_, k) => ({ time: "10:00AM", on: k % 2 === 0 ? true : false }));
     const [feedAmount, setFeedAmount] = useState(10);
+    const [overview, setOverview] = useState<AquariumOverview>();
+
+    useEffect(() => {
+        getAquariumOverview().then(setOverview);
+    }, [])
 
     function handleFeeding(e: React.MouseEvent) {
         requestFeed(feedAmount)
@@ -19,11 +24,13 @@ export default function FeedingPage() {
 
     }
 
+
+
     return (
         <div className="feeding-page">
             <div className="first-part glassmorphism">
                 <label className="amount-input">
-                    <span className="title">Amount of foods</span>
+                    <span className="title">Amount of food</span>
                     <div>
                         <input type="number" value={feedAmount}
                             onChange={(e) => setFeedAmount(Number(e.target.value))} />
@@ -32,16 +39,12 @@ export default function FeedingPage() {
                 </label>
                 <Button className="feeding-btn" onClick={handleFeeding}>Feed now</Button>
                 <div>
-                    <span>Number of feedings today</span>
-                    <span>{10}</span>
-                </div>
-                <div>
                     <span>Last feeding</span>
                     <span>10:00AM</span>
                 </div>
                 <div>
                     <span>Amount of food dispensed today</span>
-                    <span>100g</span>
+                    <span>{overview?.feedAmount}g</span>
                 </div>
             </div>
             <div className="second-part glassmorphism">

@@ -55,31 +55,56 @@ const sendMessage = async () => {
 };
 
 return (
-    <div className="glassmorphism" style={{
+    <div style={{
+        position: 'relative',
         display: 'flex',
         flexDirection: 'column',
-        gap: '20px',
-        height: '50%',
+        height: '70%',
         margin: '10px 20px',
-        padding: '20px 20px',
-        justifyContent: 'space-between'
     }}>
-    {/* Khung hiển thị tin nhắn */}
-        <div style={{
+        <div className="glassmorphism" style={{
+            position: 'relative',
             display: 'flex',
             flexDirection: 'column',
+            gap: '10px',
             height: '100%',
-            marginTop: '10px',
-            backgroundColor: 'rgba(255, 255, 255, 0.2)',
-            borderRadius: '20px',
+            padding: '20px 20px',
+            boxSizing: 'content-box',
+            overflow: 'scroll',
+            scrollBehavior: 'smooth'
         }}>
-            {history.map((item, idx) => (
-                <div
+        {/* Khung hiển thị tin nhắn */}
+            {history.map((item, idx) => {
+                if (item.role === 'user') {
+                    return (
+                        <div
+                        key={idx}
+                        dangerouslySetInnerHTML={{ __html: item.parts?.[0]?.text}}
+                        style={{
+                            alignSelf: "flex-end",
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            padding: '5px 10px',
+                            borderRadius: '20px',
+                            maxWidth: '70%',
+                        }}
+                        />
+                    );
+                }
+                
+                return (
+                    <div
                     key={idx}
                     dangerouslySetInnerHTML={{ __html: item.parts?.[0]?.text}}
-                >
-                </div>
-            ))}
+                    style={{
+                        alignSelf: "flex-start",
+                        backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                        padding: '5px 10px',
+                        borderRadius: '20px',
+                        maxWidth: '70%',
+                    }}
+                    />
+                );
+            })}
             {loading && (
                 <div className="text-gray-400 italic">AI is typing...</div>
             )}
@@ -87,9 +112,17 @@ return (
 
         {/* Ô nhập liệu */}
         <div style={{
+            position: 'absolute',
             display: 'flex',
+            bottom: '15px',
+            left: 0,
+            right: 0,
             width: '100%',
             gap: '5px',
+            padding: '0px 15px',
+            boxSizing: 'border-box',
+            alignItems: 'center',
+            justifyContent: 'center',
         }}>
             <input
                 type="text"
@@ -101,17 +134,18 @@ return (
                 style={{
                     width: '100%'
                 }}
-            />
+                />
             <Button
                 onClick={sendMessage}
                 disabled={loading}
                 style={{
                     padding: '0px 20px',
                     lineHeight: 0,
-                    height: '35px'
+                    height: '35px',
+                    width: 'fit-content'
                 }}
-            >
-            Send
+                >
+                Send
             </Button>
         </div>
     </div>
