@@ -1,3 +1,5 @@
+import { getAuth } from "@firebase/auth"
+
 type ScheduleEntry = {
     hour: number;
     minute: number;
@@ -59,6 +61,21 @@ async function deleteSchedule(entry: ScheduleEntry): Promise<boolean> {
         body: JSON.stringify(entry),
     });
     return res.ok;
+}
+
+export async function changeImage(image: Uint8Array, width: number, height: number) {
+    const payload = JSON.stringify({ width, height, image })
+    const size = new TextEncoder().encode(payload).length;
+    console.log("Length: ", size);
+    fetch('http://localhost:3000/api/device/change-image', {
+        method: 'PUT',
+        headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${await getAuth().currentUser?.getIdToken()}`
+        },
+        body: JSON.stringify({ width, height, image: Array.from(image) })
+    })
+    .catch(console.error);
 }
 
 export {

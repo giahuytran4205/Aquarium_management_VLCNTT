@@ -2,6 +2,7 @@ import { useState } from "react";
 import Button from "../components/Button";
 import "./CustomizeWidgetPage.css"
 import WidgetImage from "./WidgetImage";
+import { changeImage } from "../utils/api";
 
 export default function CustomizeWidgetPage() {
     const devices = Array.from({ length: 10 }, (_, k) => ({ name: "Device " + k, id: k }));
@@ -15,6 +16,44 @@ export default function CustomizeWidgetPage() {
 
     function handleImageUpload(e: React.ChangeEvent<HTMLInputElement>) {
         setChoosenFile(e.target.files?.[0]);
+    }
+
+    async function handleChangeImage(e: React.MouseEvent<HTMLButtonElement>) {
+        setFile(choosenFile);
+        if (!choosenFile)
+            return;
+        
+        let bitmap = await createImageBitmap(choosenFile);
+        
+        let canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+        let ctx = canvas.getContext("2d");
+        if (!ctx)
+            return;
+
+        ctx.drawImage(bitmap, 0, 0);
+        
+        let imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+        const data = imageData.data;
+        const newWidth = Math.floor((bitmap.width + 7) / 8);
+        const out =  new Uint8Array(newWidth * bitmap.height);
+
+        for (let i = 0; i < bitmap.height; i++) {
+            for (let j = 0; j < bitmap.width; j++) {
+                const index = i * bitmap.width + j;
+                let r = data[index * 4];
+                let g = data[index * 4 + 1];
+                let b = data[index * 4 + 2];
+                let a = data[index * 4 + 3];
+                
+                let gray = (0.299 * r + 0.587 * g + 0.114 * b) | 0;
+                
+                let bit = (a > 128 && gray > 128) ? 1 : 0;
+                
+                out[i * newWidth + (j >> 3)] |= (bit << (j % 8));
+            }
+        }
+
+        changeImage(out, bitmap.width, bitmap.height);
     }
 
     return (
@@ -35,7 +74,7 @@ export default function CustomizeWidgetPage() {
                     alignSelf: "center",
 
                 }} />
-                <Button onClick={() => setFile(choosenFile)}>Accept</Button>
+                <Button onClick={handleChangeImage}>Accept</Button>
             </div>
             <div className="glassmorphism">
                 <span>Your widget</span>

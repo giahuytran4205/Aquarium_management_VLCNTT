@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Chat } from "./utils/ChatBot";
 
-const serviceAccount: admin.ServiceAccount = require("./firebase-service-account.json");
+const serviceAccount: admin.ServiceAccount = require("./aquarium-app-d2b00-firebase-adminsdk-fbsvc-8979b80bd4.json");
 
 declare global {
 	namespace Express {
@@ -23,6 +23,8 @@ declare global {
 dotenv.config();
 
 const app = express();
+app.use(express.json({ limit: '1mb' }));   // cho phép JSON tối đa 1 MB
+app.use(express.urlencoded({ limit: '1mb', extended: true }));
 const port = process.env.PORT || 3000;
 const mq = mqtt.connect('mqtt://broker.hivemq.com');
 admin.initializeApp({
@@ -232,6 +234,21 @@ async function main() {
 			return res.status(400).send("Missing status.")
 		requestPump(on);
 		res.sendStatus(200);
+	});
+
+	app.put('/api/device/change-image', checkAuth, async (req, res) => {
+		const width = req.body.width
+		const height = req.body.height
+		const image = new Uint8Array(req.body.image)
+
+		const buffer = Buffer.alloc(4 + image.length);
+
+		buffer.writeUInt16LE(width, 0);
+		buffer.writeUInt16LE(height, 2);
+		buffer.set(image, 4);
+
+		mq.publish(TOPIC + '/change-image', buffer);
+		res.status(200);
 	});
 
 	app.post("/api/send-notification", async (req, res) => {

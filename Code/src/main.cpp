@@ -38,16 +38,28 @@ Scheduler scheduler;
 
 // Khởi tạo U8g2 cho màn hình I2C 128x64
 // Chân SDA = D2 (GPIO4), SCL = D1 (GPIO5)
-U8G2_SH1106_128X64_NONAME_F_HW_I2C display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
+Display display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 ConnectionConfig connectionConfig(ssid, password, display);
 
 void mqttCallback(char* topic, byte* payload, uint length) {
+	Serial.println(topic);
+	if (TOPIC + "/change-image" == topic) {
+		uint16_t width  = payload[0] | (payload[1] << 8);
+		uint16_t height = payload[2] | (payload[3] << 8);
 
+		unsigned int imageSize = length - 4;
+
+		uint8_t* imageData = new uint8_t[imageSize];
+		memcpy(imageData, payload + 4, imageSize);
+
+		display.setImage(imageData, width, height);
+	}
 }
 
 void setupMQTT() {
 	mq.setServer("broker.hivemq.com", 1883);
+	mq.subscribe((TOPIC + "/#").c_str());
   	mq.setCallback(mqttCallback);
 }
 void setupTime() {
@@ -100,7 +112,7 @@ void setup() {
 	connectionConfig.setupWifi();
 	
 	showAPQRCode();
-	// showInfo(display, "8/4/2025", "Monday", 20, true, "10:00AM", nullptr);
+
 	A.attach(D5);
 	B.attach(D7);
 	C.attach(D6);
@@ -169,6 +181,9 @@ void loop() {
 						"pumpRunning": )" + (true ? "true" : "false") + R"(
 					}
 				)").c_str());
+			}
+			if (timer % 5 == 0) {
+				display.showInfo("8/4/2025", "Monday", 20, true, "10:00AM");
 			}
 		}
 	}
