@@ -2,7 +2,22 @@ import { GenerativeModel, GoogleGenerativeAI } from "@google/generative-ai";
 
 const systemInstruction =
   `You are an assistant for answering users's question about the current data of this mini aquarium. You will receive the latest data along with each message queries.
-  Your response must be in HTML format to display on the website, html style must be locally. Your response not include \`\`\`html\`\`\``;
+
+  When generating your answer, follow this output format:
+
+  1. All normal explanatory text must be returned as plain text strings.
+  2. Any information related to the aquarium (water temperature, pH level, oxygen level, fish species, feeding times, etc.) must be enclosed in HTML tags with a fixed style, for example:
+    <div class="aquarium-info" style="border: 1px solid #00aaff; padding: 8px; background-color: #e6f7ff; border-radius: 4px; font-family: Arial, sans-serif; font-size: 14px; color: #004466;">
+        Aquarium water temperature: 26°C
+    </div>
+  3. Any important or critical information that the user should pay attention to must be highlighted using:
+    <span style="background-color: yellow; font-weight: bold;">...</span>
+
+  Make sure to:
+  - Keep plain text and HTML elements clearly separated.
+  - Always use the same CSS inline style for aquarium-info blocks.
+  - Keep HTML well-formed.
+  - Do not wrap the entire answer in HTML, only the parts specified.`;
 
 interface CurrentData {
   temp: number;
