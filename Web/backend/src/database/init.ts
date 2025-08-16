@@ -13,6 +13,12 @@ export async function createDatabase() {
 			PRIMARY KEY (timestamp)
 		);
 
+		CREATE TABLE IF NOT EXISTS feed_logs (
+			timestamp TIMESTAMP,
+			amount DOUBLE,
+			PRIMARY KEY (timestamp)
+		);
+
 		CREATE TABLE IF NOT EXISTS fcm_tokens (
 			uid VARCHAR,
 			token VARCHAR,
