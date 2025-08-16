@@ -11,17 +11,23 @@
 #include "button.h"
 #include "feeder.h"
 #include <scheduler.h>
-#include <OneWire.h>
-#include <DallasTemperature.h>
+#include "temperature.h"
+
+// #include <OneWire.h>
+// #include <DallasTemperature.h>
+
 
 // Cấu hình cảm biết nhiệt độ
-#define ONE_WIRE_BUS D5  
-OneWire oneWire(ONE_WIRE_BUS);
-DallasTemperature tempSensors(&oneWire);
 
 // Cấu hình pin
+#define TEMP_PIN D5  
 #define RELAY_PIN D7
 #define SERVO_PIN D6
+
+// Cấu hình thiết bị
+button A, B, C;
+Feeder MyFeeder;
+TemperatureSensor mySensor(TEMP_PIN);
 
 
 // Cấu hình Wi-Fi
@@ -74,6 +80,7 @@ void setupMQTT() {
 	mq.subscribe((TOPIC + "/#").c_str());
   	mq.setCallback(mqttCallback);
 }
+
 void setupTime() {
 	// UTC+7 (Vietnam HCM)
 	Serial.println("Setting up time configuration...");
@@ -90,10 +97,6 @@ void showAPQRCode() {
 	display.drawXBM(0, 0, size, size, bitmap.data());
 	display.sendBuffer();
 }
-
-button A, B, C;
-Feeder MyFeeder;
-// int relayPin = D3;
 
 void startFeed(int grams) {
 	MyFeeder.feed(grams);
@@ -115,7 +118,7 @@ void setup() {
 	display.clearBuffer();
 	
 	MyFeeder.init(SERVO_PIN);
-	tempSensors.begin();
+	mySensor.begin();
 	pinMode(RELAY_PIN, OUTPUT);
 
 	scheduler.add(12, 30, []() { // run at 12:30 every day
@@ -142,55 +145,50 @@ void loop() {
 	connectionConfig.loop();
 	mq.loop();
 	scheduler.loop();
+
+
 	A.update();
 	B.update();
 	C.update();
-	// tempSensors.requestTemperatures();                // Yêu cầu đọc nhiệt độ
-	// float tempC = tempSensors.getTempCByIndex(0);     // Đọc nhiệt độ (°C)
+	mySensor.update();
 	
-	// Serial.print("Nhiet do: ");
-	// Serial.print(tempC);
-	// Serial.println(" *C");
-
-	// C.update();
-
-	// digitalWrite(relayPin, HIGH);
-	// delay(1000);
-	// digitalWrite(relayPin, LOW);
-	// delay(1000);
-	
-	if (B.isPress()) {
-		Serial.println("Pressing B");
-		// digitalWrite(relayPin, HIGH);
-	} else {
-		// digitalWrite(relayPin, LOW);
-	}
-
 	
 	if (B.isPressFor(1000)) {
 		Serial.println("Pressing B and holding B");
+		digitalWrite(RELAY_PIN, HIGH);
+		delay(2000);
+		digitalWrite(RELAY_PIN, LOW);
 	}
 
+	if (B.isPress()) {
+		Serial.println("Pressing B");
+		Serial.println(mySensor.get_lastest_celcius());
+	} else {
+	}
+
+
+
+	if (C.isPressFor(1000)) {
+		Serial.println("Pressing C and holding C");
+		// startFeed(1);
+	}
 	
 	if (C.isPress()) {
 		Serial.println("Pressing C");
 	}
 
 	
-	if (C.isPressFor(1000)) {
-		Serial.println("Pressing C and holding C");
-		// startFeed(1);
+
+	if (A.isPressFor(1000)) {
+		Serial.println("Pressing A and holding A");
 	}
 
 	if (A.isPress()) {
 		Serial.println("Pressing A");
-		// startFeed(2);
+		startFeed(2);
+
 	}
 
-	
-	if (A.isPressFor(1000)) {
-		Serial.println("Pressing A and holding A");
-	}
 
 	if (WiFi.status() == WL_CONNECTED) {
 		if (!mq.connected()) {

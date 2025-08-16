@@ -18,6 +18,11 @@ public:
     timer = millis();
   }
   
+  // call when want to reset after an action took long to complete
+  void resetTimer() {
+    timer = millis(); 
+  }
+
   void update() { 
     bool nState = digitalRead(pin) == LOW; // LOW = nhấn nếu dùng pull-up
     if (nState != state)
