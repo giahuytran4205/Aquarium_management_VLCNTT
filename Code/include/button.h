@@ -11,8 +11,8 @@ public:
     state = false;
     pin = 0; // mặc định GPIO0 (D3 trên NodeMCU)
   }
-
-  void attach(int _pin) { 
+  
+  void attach(int _pin, int input_Type = INPUT_PULLUP) { 
     pin = _pin;
     pinMode(pin, INPUT_PULLUP); // dùng pull-up nội để tránh nhiễu
     timer = millis();

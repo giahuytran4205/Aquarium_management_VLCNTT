@@ -11,6 +11,18 @@
 #include "button.h"
 #include "feeder.h"
 #include <scheduler.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+// Cấu hình cảm biết nhiệt độ
+#define ONE_WIRE_BUS D5  
+OneWire oneWire(ONE_WIRE_BUS);
+DallasTemperature tempSensors(&oneWire);
+
+// Cấu hình pin
+#define RELAY_PIN D7
+#define SERVO_PIN D6
+
 
 // Cấu hình Wi-Fi
 const char *ssid = "Aquarium management AP";
@@ -69,6 +81,7 @@ void showAPQRCode() {
 
 button A, B, C;
 Feeder MyFeeder;
+// int relayPin = D3;
 
 void startFeed(int grams) {
 	MyFeeder.feed(grams);
@@ -84,12 +97,14 @@ void controlPump(bool on) {
 void setup() {
 	Serial.begin(115200);
 	
-	MyFeeder.init(D8);
 	// I2C setup
 	Wire.begin(D2, D1);
-	
 	display.begin();
 	display.clearBuffer();
+	
+	MyFeeder.init(SERVO_PIN);
+	tempSensors.begin();
+	pinMode(RELAY_PIN, OUTPUT);
 
 	scheduler.add(12, 30, []() { // run at 12:30 every day
 		startFeed(10);
@@ -101,10 +116,12 @@ void setup() {
 	
 	showAPQRCode();
 	// showInfo(display, "8/4/2025", "Monday", 20, true, "10:00AM", nullptr);
-	A.attach(D5);
-	B.attach(D7);
-	C.attach(D6);
-	// use pin 5 6 7, dont use pin d8 because input pulled to gnd
+	C.attach(3);
+	A.attach(D3);
+	B.attach(D4);
+	// use pin RX 3 4, dont use pin d8 because input pulled to gnd
+	Serial.println("Complete setup");
+
 	
 }
 
@@ -116,9 +133,25 @@ void loop() {
 	A.update();
 	B.update();
 	C.update();
+	// tempSensors.requestTemperatures();                // Yêu cầu đọc nhiệt độ
+	// float tempC = tempSensors.getTempCByIndex(0);     // Đọc nhiệt độ (°C)
+	
+	// Serial.print("Nhiet do: ");
+	// Serial.print(tempC);
+	// Serial.println(" *C");
 
+	// C.update();
+
+	// digitalWrite(relayPin, HIGH);
+	// delay(1000);
+	// digitalWrite(relayPin, LOW);
+	// delay(1000);
+	
 	if (B.isPress()) {
 		Serial.println("Pressing B");
+		// digitalWrite(relayPin, HIGH);
+	} else {
+		// digitalWrite(relayPin, LOW);
 	}
 
 	
@@ -134,12 +167,12 @@ void loop() {
 	
 	if (C.isPressFor(1000)) {
 		Serial.println("Pressing C and holding C");
-		startFeed(1);
+		// startFeed(1);
 	}
 
 	if (A.isPress()) {
 		Serial.println("Pressing A");
-		startFeed(2);
+		// startFeed(2);
 	}
 
 	
@@ -172,5 +205,8 @@ void loop() {
 			}
 		}
 	}
-	delay(1000);
+	// delay(10);
 }
+
+
+
