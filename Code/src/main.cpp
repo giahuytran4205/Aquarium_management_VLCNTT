@@ -11,6 +11,7 @@
 #include "button.h"
 #include "feeder.h"
 #include <scheduler.h>
+#include <utils.h>
 
 // Cấu hình Wi-Fi
 const char *ssid = "Aquarium management AP";
@@ -44,7 +45,7 @@ ConnectionConfig connectionConfig(ssid, password, display);
 
 void mqttCallback(char* topic, byte* payload, uint length) {
 	Serial.println(topic);
-	if (TOPIC + "/change-image" == topic) {
+	if (String(topic).endsWith("/change-image")) {
 		uint16_t width  = payload[0] | (payload[1] << 8);
 		uint16_t height = payload[2] | (payload[3] << 8);
 
@@ -59,7 +60,6 @@ void mqttCallback(char* topic, byte* payload, uint length) {
 
 void setupMQTT() {
 	mq.setServer("broker.hivemq.com", 1883);
-	mq.subscribe((TOPIC + "/#").c_str());
   	mq.setCallback(mqttCallback);
 }
 void setupTime() {
@@ -171,6 +171,7 @@ void loop() {
 			}
 		}
 		if (mq.connected()) {
+			mq.subscribe((TOPIC + "/#").c_str());
 			timer++;
 			if (timer % 5 == 0) { // run every 5 seconds
 				mq.publish((TOPIC + "/data/sensors").c_str(),
@@ -183,7 +184,7 @@ void loop() {
 				)").c_str());
 			}
 			if (timer % 5 == 0) {
-				display.showInfo("8/4/2025", "Monday", 20, true, "10:00AM");
+				display.showInfo(getDate(), getDayOfWeek(), getTime(), 20, true);
 			}
 		}
 	}
