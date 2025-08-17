@@ -12,18 +12,30 @@
 #include "feeder.h"
 #include <scheduler.h>
 #include <utils.h>
+#include "temperature.h"
+
+// #include <OneWire.h>
+// #include <DallasTemperature.h>
+
+
+// Cấu hình cảm biết nhiệt độ
+
+// Cấu hình pin
+#define TEMP_PIN D5  
+#define RELAY_PIN D7
+#define SERVO_PIN D6
+
+// Cấu hình thiết bị
+button A, B, C;
+Feeder MyFeeder;
+TemperatureSensor mySensor(TEMP_PIN);
+
 
 // Cấu hình Wi-Fi
 const char *ssid = "Aquarium management AP";
 const char *password = "MatKhauWifi";
 
 const String TOPIC = "aquarium1b3d5f";
-
-uint64_t get_current_time_ms() {
-  struct timeval tv;
-  gettimeofday(&tv, nullptr);
-  return (uint64_t)tv.tv_sec * 1000 + (uint64_t)tv.tv_usec / 1000;
-}
 
 // Web server
 ESP8266WebServer server(80);
@@ -32,7 +44,7 @@ HTTPClient httpClient;
 WiFiClient wifiClient;
 PubSubClient mq(wifiClient);
 
-Scheduler scheduler;
+bool runPump = true;
 
 // QR scale
 #define QR_SCALE 2
@@ -43,9 +55,23 @@ Display display(U8G2_R0, /* reset=*/ U8X8_PIN_NONE);
 
 ConnectionConfig connectionConfig(ssid, password, display);
 
+void startFeed(int grams) {
+	MyFeeder.feed(grams);
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/feed").c_str(), String(grams).c_str());
+}
+void controlPump(bool on) {
+	runPump = on;
+	if (mq.connected())
+		mq.publish((TOPIC + "/data/pump").c_str(), on ? "on" : "off");
+}
+
 void mqttCallback(char* topic, byte* payload, uint length) {
-	Serial.println(topic);
-	if (String(topic).endsWith("/change-image")) {
+	String payloadString = "";
+	for (int i = 0; i < length; i++)
+		payloadString += payload[i];
+
+	if (strstr(topic, "/change-image")) {
 		uint16_t width  = payload[0] | (payload[1] << 8);
 		uint16_t height = payload[2] | (payload[3] << 8);
 
@@ -55,20 +81,17 @@ void mqttCallback(char* topic, byte* payload, uint length) {
 		memcpy(imageData, payload + 4, imageSize);
 
 		display.setImage(imageData, width, height);
+	} else if (strstr(topic, "/feed")) {
+		int grams = atoi(payloadString.c_str());
+		startFeed(grams);
+	} else if (strstr(topic, "/pump")) {
+		controlPump(strstr(payloadString.c_str(), "on") != nullptr);
 	}
 }
 
 void setupMQTT() {
 	mq.setServer("broker.hivemq.com", 1883);
   	mq.setCallback(mqttCallback);
-}
-void setupTime() {
-	// UTC+7 (Vietnam HCM)
-	Serial.println("Setting up time configuration...");
-	configTime(7 * 3600, 0, "pool.ntp.org");
-	delay(5000);
-	if (get_current_time_ms() < 1655265147604LL)
-		Serial.println("NTP sync delay timeout. Timestamp may be wrong.");
 }
 
 void showAPQRCode() {
@@ -79,44 +102,30 @@ void showAPQRCode() {
 	display.sendBuffer();
 }
 
-button A, B, C;
-Feeder MyFeeder;
-
-void startFeed(int grams) {
-	MyFeeder.feed(grams);
-	if (mq.connected())
-		mq.publish((TOPIC + "/data/feed").c_str(), String(grams).c_str());
-}
-void controlPump(bool on) {
-	// ...
-	if (mq.connected())
-		mq.publish((TOPIC + "/data/pump").c_str(), on ? "on" : "off");
-}
-
 void setup() {
 	Serial.begin(115200);
 	
-	MyFeeder.init(D8);
 	// I2C setup
 	Wire.begin(D2, D1);
-	
 	display.begin();
 	display.clearBuffer();
-
-	scheduler.add(12, 30, []() { // run at 12:30 every day
-		startFeed(10);
-	});
+	
+	MyFeeder.init(SERVO_PIN);
+	mySensor.begin();
+	pinMode(RELAY_PIN, OUTPUT);
 
 	setupMQTT();
 	
 	connectionConfig.setupWifi();
 	
 	showAPQRCode();
+	// showInfo(display, "8/4/2025", "Monday", 20, true, "10:00AM", nullptr);
+	C.attach(3);
+	A.attach(D3);
+	B.attach(D4);
+	// use pin RX 3 4, dont use pin d8 because input pulled to gnd
+	Serial.println("Complete setup");
 
-	A.attach(D5);
-	B.attach(D7);
-	C.attach(D6);
-	// use pin 5 6 7, dont use pin d8 because input pulled to gnd
 	
 }
 
@@ -124,39 +133,21 @@ int timer = 0;
 void loop() {
 	connectionConfig.loop();
 	mq.loop();
-	scheduler.loop();
+
 	A.update();
-	B.update();
-	C.update();
-
-	if (B.isPress()) {
-		Serial.println("Pressing B");
-	}
-
+	B.update(); // Pump toggle
+	C.update(); // Feed
+	mySensor.update();
 	
 	if (B.isPressFor(1000)) {
-		Serial.println("Pressing B and holding B");
+		controlPump(!runPump);
+		B.resetTimer();
 	}
+	digitalWrite(RELAY_PIN, runPump ? HIGH : LOW);
 
-	
-	if (C.isPress()) {
-		Serial.println("Pressing C");
-	}
-
-	
 	if (C.isPressFor(1000)) {
-		Serial.println("Pressing C and holding C");
-		startFeed(1);
-	}
-
-	if (A.isPress()) {
-		Serial.println("Pressing A");
 		startFeed(2);
-	}
-
-	
-	if (A.isPressFor(1000)) {
-		Serial.println("Pressing A and holding A");
+		C.resetTimer();
 	}
 
 	if (WiFi.status() == WL_CONNECTED) {
@@ -165,21 +156,21 @@ void loop() {
 			bool res = mq.connect(clientId.c_str());
 			Serial.print("Connection to MQTTT: ");
 			Serial.println(res);
-			if (timer == 0) { // first start
-				mq.publish((TOPIC + "/data/power").c_str(), "on");
-				setupTime();
+			if (res) {
+				mq.subscribe((TOPIC + "/command/#").c_str());
+				if (timer == 0) // first start
+					mq.publish((TOPIC + "/data/power").c_str(), "on");
 			}
 		}
 		if (mq.connected()) {
 			mq.subscribe((TOPIC + "/#").c_str());
 			timer++;
-			if (timer % 5 == 0) { // run every 5 seconds
+			if (timer % 5 == 0) {
 				mq.publish((TOPIC + "/data/sensors").c_str(),
 				(R"(
 					{
-						"timestamp": )" + String(get_current_time_ms()) + R"(,
-						"temperature": )" + String(123) + R"(,
-						"pumpRunning": )" + (true ? "true" : "false") + R"(
+						"temperature": )" + String(mySensor.get_temperature()) + R"(,
+						"pumpRunning": )" + (runPump ? "true" : "false") + R"(
 					}
 				)").c_str());
 			}
@@ -190,3 +181,6 @@ void loop() {
 	}
 	delay(1000);
 }
+
+
+

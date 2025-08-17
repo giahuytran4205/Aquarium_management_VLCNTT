@@ -11,13 +11,18 @@ public:
     state = false;
     pin = 0; // mặc định GPIO0 (D3 trên NodeMCU)
   }
-
-  void attach(int _pin) { 
+  
+  void attach(int _pin, int input_Type = INPUT_PULLUP) { 
     pin = _pin;
     pinMode(pin, INPUT_PULLUP); // dùng pull-up nội để tránh nhiễu
     timer = millis();
   }
   
+  // call when want to reset after an action took long to complete
+  void resetTimer() {
+    timer = millis(); 
+  }
+
   void update() { 
     bool nState = digitalRead(pin) == LOW; // LOW = nhấn nếu dùng pull-up
     if (nState != state)
