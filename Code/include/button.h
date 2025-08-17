@@ -25,6 +25,7 @@ public:
 
   void update() { 
     bool nState = digitalRead(pin) == LOW; // LOW = nhấn nếu dùng pull-up
+    nState &= nState != state;
     if (nState != state)
       timer = millis();
     state = nState;
