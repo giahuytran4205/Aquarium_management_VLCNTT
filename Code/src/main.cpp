@@ -98,6 +98,16 @@ void setupMQTT() {
   	mq.setCallback(mqttCallback);
 }
 
+time_t setupTime ()
+{
+	configTime(7*3600, 0, "pool.ntp.org");
+	while(!time(nullptr))
+	{
+		Serial.println("*");
+		delay(500);
+	}
+}
+
 void showAPQRCode() {
 	display.clear();
 	auto [bitmap, size] = connectionConfig.getAPQRBitmap(2);
@@ -168,7 +178,11 @@ void loop() {
 				mq.subscribe((TOPIC + "/command/#").c_str());
 				if (timer == 0) {// first start
 					mq.publish((TOPIC + "/data/power").c_str(), "on");
+<<<<<<< HEAD
 					configTime(7 * 3600, 0, "time.nist.gov");
+=======
+					setupTime();
+>>>>>>> 9f32de47a086470441f5ce498da261906a195857
 				}
 			}
 		}
