@@ -158,8 +158,10 @@ void loop() {
 			Serial.println(res);
 			if (res) {
 				mq.subscribe((TOPIC + "/command/#").c_str());
-				if (timer == 0) // first start
+				if (timer == 0) {// first start
 					mq.publish((TOPIC + "/data/power").c_str(), "on");
+					configTime(7 * 3600, 0, "pool.ntp.org");
+				}
 			}
 		}
 		if (mq.connected()) {
