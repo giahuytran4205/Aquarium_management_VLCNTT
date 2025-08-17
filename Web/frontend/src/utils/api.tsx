@@ -55,7 +55,7 @@ async function getAquariumOverview(): Promise<AquariumOverview> {
 async function getActionLog(): Promise<LogEntry[]> {
     const res = await fetch('http://localhost:3000/api/logs');
     const data: { timestamp: string; message: string }[] = await res.json()
-    return data.map(log => ({ ...log, timestamp: new Date(log.timestamp) }));
+    return data.map(log => ({ ...log, timestamp: new Date(log.timestamp.slice(0, -1)) }));
 }
 async function getAquariumHistory(limit: number): Promise<AquariumHistory> {
     const res = await fetch('http://localhost:3000/api/device/history', {
@@ -111,7 +111,7 @@ export async function changeImage(image: Uint8Array, width: number, height: numb
         },
         body: JSON.stringify({ width, height, image: Array.from(image) })
     })
-    .catch(console.error);
+        .catch(console.error);
 }
 
 export {

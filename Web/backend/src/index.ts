@@ -9,6 +9,7 @@ import { DecodedIdToken } from "firebase-admin/lib/auth/token-verifier";
 import { Resend } from 'resend';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Chat } from "./utils/ChatBot";
+import schedule from "node-schedule"
 
 const serviceAccount: admin.ServiceAccount = require("./aquarium-b645f-firebase-adminsdk-fbsvc-6d85df98dc.json");
 
@@ -42,6 +43,12 @@ const chatBot = new Chat(API_KEY);
 type AquariumStatus = {
 	pumpRunning: boolean
 	temperature: number
+};
+
+type FeedScheduleEntry = {
+	hour: number
+	minute: number
+	amount: number
 };
 
 let aquariumStatus: AquariumStatus = {
@@ -78,6 +85,7 @@ async function main() {
 	async function getActionLog() {
 		const QUERY = `
 			SELECT timestamp, message FROM action_logs
+			ORDER BY timestamp DESC
 		`;
 		let result = await db.run(QUERY);
 		let rows = await result.getRowObjectsJS();
@@ -91,9 +99,36 @@ async function main() {
 		mq.publish(`${TOPIC}/command/pump`, on ? "on" : "off");
 	}
 
+	async function getSchedule(): Promise<FeedScheduleEntry[]> {
+		let QUERY = `
+			SELECT hour, minute, amount
+			FROM feed_times
+			ORDER BY hour, minute DESC;
+		`;
+		let reader = await db.runAndReadAll(QUERY);
+		return reader.getRowObjectsJS() as FeedScheduleEntry[];
+	}
+
+	let jobs: schedule.Job[] = [];
+	async function resetSchedule() {
+		for (let job of jobs)
+			job.cancel();
+		jobs = [];
+		let scheduled = await getSchedule();
+		for (let { hour, minute, amount } of scheduled) {
+			const rule = new schedule.RecurrenceRule();
+			rule.hour = hour;
+			rule.minute = minute;
+
+			const job = schedule.scheduleJob(rule, () => requestFeed(amount));
+			jobs.push(job);
+		}
+	}
+
 	mq.on('connect', () => {
 		console.log('Connected to MQTT broker.');
 		mq.subscribe("aquarium1b3d5f/data/#");
+		resetSchedule();
 	});
 	mq.on('message', async (topic, message) => {
 		if (topic.endsWith('/sensors')) {
@@ -203,14 +238,7 @@ async function main() {
 	});
 
 	app.get('/api/device/schedule', async (req, res) => {
-		let QUERY = `
-			SELECT hour, minute, amount
-			FROM feed_times
-			ORDER BY hour, minute DESC;
-		`;
-		let reader = await db.runAndReadAll(QUERY);
-
-		res.json(reader.getRowObjectsJS());
+		res.json(await getSchedule());
 	});
 
 	app.get('/api/device/current', async (req, res) => {
@@ -228,10 +256,11 @@ async function main() {
 				SET amount = EXCLUDED.amount;
 		`;
 		let reader = await db.runAndReadAll(QUERY, [hour, minute, amount]);
+		resetSchedule();
 
-		logAction(`Added feeding at ${hour}:${minute}`);
+		logAction(`Added a feed schedule.`);
 
-		res.json(reader.getRowObjectsJS());
+		res.sendStatus(200);
 	});
 
 	app.delete('/api/device/schedule', async (req, res) => {
@@ -244,10 +273,11 @@ async function main() {
 			WHERE hour = ? AND minute = ?;
 		`;
 		let reader = await db.runAndReadAll(QUERY, [hour, minute]);
+		resetSchedule();
 
-		logAction(`Deleted feeding at ${hour}:${minute}`);
+		logAction(`Deleted a feed schedule.`);
 
-		res.json(reader.getColumnsObjectJS());
+		res.sendStatus(200);
 	});
 
 	app.post('/api/device/feed', async (req, res) => {

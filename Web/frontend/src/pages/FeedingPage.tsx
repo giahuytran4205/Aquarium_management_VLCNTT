@@ -3,16 +3,23 @@ import Button from "../components/Button";
 import "./FeedingPage.css"
 import Toggle from "../components/Toggle";
 import { useEffect, useState } from "react";
-import { type AquariumOverview, requestFeed, getAquariumOverview } from "../utils/api";
+import { type AquariumOverview, requestFeed, getAquariumOverview, type ScheduleEntry, getSchedule, deleteSchedule, addSchedule } from "../utils/api";
+import { formatTime } from "../utils/format";
 
 export default function FeedingPage() {
-    const schedules = Array.from({ length: 5 }, (_, k) => ({ time: "10:00AM", on: k % 2 === 0 ? true : false }));
+    const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
     const [feedAmount, setFeedAmount] = useState(10);
     const [overview, setOverview] = useState<AquariumOverview>();
 
-    useEffect(() => {
+    function update() {
+        getSchedule().then(setSchedule);
         getAquariumOverview().then(setOverview);
-    }, [])
+    };
+    useEffect(() => {
+        const timer = setInterval(update, 1000);
+        update();
+        return () => clearInterval(timer);
+    }, []);
 
     function handleFeeding(e: React.MouseEvent) {
         requestFeed(feedAmount)
@@ -21,7 +28,17 @@ export default function FeedingPage() {
     }
 
     function handleAddSchedule(e: React.MouseEvent) {
+        let hour = Number(prompt("Enter hour:"));
+        let minute = Number(prompt("Enter minute:"));
+        let amount = Number(prompt("Enter amount (grams):"));
 
+        if (isNaN(hour) || isNaN(minute) || isNaN(amount))
+            return;
+        addSchedule({ hour, minute, amount });
+    }
+
+    function handleRemoveSchedule(item: ScheduleEntry) {
+        deleteSchedule(item);
     }
 
 
@@ -39,10 +56,6 @@ export default function FeedingPage() {
                 </label>
                 <Button className="feeding-btn" onClick={handleFeeding}>Feed now</Button>
                 <div>
-                    <span>Last feeding</span>
-                    <span>10:00AM</span>
-                </div>
-                <div>
                     <span>Amount of food dispensed today</span>
                     <span>{overview?.feedAmount}g</span>
                 </div>
@@ -54,10 +67,10 @@ export default function FeedingPage() {
                     <span>Add</span>
                 </Button>
                 <div className="schedules">
-                    {schedules.map((value, index) =>
+                    {schedule.map((value, index) =>
                         <div className="item" key={index}>
-                            <span>{value.time}</span>
-                            <Toggle />
+                            <span>{formatTime(value.hour, value.minute)}</span>
+                            <Toggle checked={true} onClick={() => handleRemoveSchedule(value)} />
                         </div>
                     )}
                 </div>

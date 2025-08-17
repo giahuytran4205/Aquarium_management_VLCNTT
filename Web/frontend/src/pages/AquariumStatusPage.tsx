@@ -15,7 +15,7 @@ export default function AquariumStatusPage() {
         getAquariumStatus().then(setStatus);
     };
     useEffect(() => {
-        const timer = setTimeout(update, 5000);
+        const timer = setInterval(update, 1000);
         update();
         return () => clearInterval(timer);
     }, []);
@@ -51,8 +51,8 @@ export default function AquariumStatusPage() {
                             </tr>
                         </thead>
                         <tbody>
-                            {schedule.map((value, index) =>
-                                <tr key={index}>
+                            {schedule.map((value, _) =>
+                                <tr key={formatTime(value.hour, value.minute)}>
                                     <td>{formatTime(value.hour, value.minute)}</td>
                                     <td>{value.amount}g</td>
                                 </tr>
@@ -70,8 +70,8 @@ export default function AquariumStatusPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {logs.map(({ timestamp, message }, index) =>
-                            <tr key={index}>
+                        {logs.map(({ timestamp, message }, _) =>
+                            <tr key={timestamp.toLocaleString('en-US')}>
                                 <td>{timestamp.toLocaleString('en-US')}</td>
                                 <td>{message}</td>
                             </tr>
