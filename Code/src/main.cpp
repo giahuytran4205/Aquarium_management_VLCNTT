@@ -100,7 +100,8 @@ void setupMQTT() {
 
 time_t setupTime ()
 {
-	configTime(7*3600, 0, "pool.ntp.org");
+	// UTC+7 (Viet Nam)
+	configTime(7*3600, 0, "time.nist.gov", "pool.ntp.org");
 	while(!time(nullptr))
 	{
 		Serial.println("*");
@@ -178,11 +179,7 @@ void loop() {
 				mq.subscribe((TOPIC + "/command/#").c_str());
 				if (timer == 0) {// first start
 					mq.publish((TOPIC + "/data/power").c_str(), "on");
-<<<<<<< HEAD
-					configTime(7 * 3600, 0, "time.nist.gov");
-=======
 					setupTime();
->>>>>>> 9f32de47a086470441f5ce498da261906a195857
 				}
 			}
 		}
