@@ -168,7 +168,7 @@ void loop() {
 				mq.subscribe((TOPIC + "/command/#").c_str());
 				if (timer == 0) {// first start
 					mq.publish((TOPIC + "/data/power").c_str(), "on");
-					configTime(7 * 3600, 0, "pool.ntp.org");
+					configTime(7 * 3600, 0, "time.nist.gov");
 				}
 			}
 		}
