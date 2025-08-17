@@ -6,13 +6,16 @@ import { useEffect, useState } from "react";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 const firebaseConfig = {
-    apiKey: "AIzaSyDyuUQeWWoiWRq3ypT0qIVYiB487Gkt6_w",
-    authDomain: "fishinwater-ae103.firebaseapp.com",
-    projectId: "fishinwater-ae103",
-    storageBucket: "fishinwater-ae103.firebasestorage.app",
-    messagingSenderId: "185241742223",
-    appId: "1:185241742223:web:1891bf099c9f22342fb9fa"
+  apiKey: "AIzaSyCBVeLPpt2PvafCImkZPdzSD7skUuXFVBQ",
+  authDomain: "aquarium-b645f.firebaseapp.com",
+  projectId: "aquarium-b645f",
+  storageBucket: "aquarium-b645f.firebasestorage.app",
+  messagingSenderId: "191975887333",
+  appId: "1:191975887333:web:cd31a3dc32980b14481f0c",
+  measurementId: "G-V4KK2CDKTS"
 };
+
+
 
 export const app = initializeApp(firebaseConfig);
 const messaging = getMessaging(app);

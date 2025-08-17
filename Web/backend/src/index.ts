@@ -10,7 +10,7 @@ import { Resend } from 'resend';
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Chat } from "./utils/ChatBot";
 
-const serviceAccount: admin.ServiceAccount = require("./aquarium-app-d2b00-firebase-adminsdk-fbsvc-8979b80bd4.json");
+const serviceAccount: admin.ServiceAccount = require("./aquarium-b645f-firebase-adminsdk-fbsvc-6d85df98dc.json");
 
 declare global {
 	namespace Express {
