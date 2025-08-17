@@ -30,9 +30,19 @@ export default function CustomizeWidgetPage() {
         if (!ctx)
             return;
 
-        ctx.drawImage(bitmap, 0, 0);
+        let w, h;
+        if (bitmap.width > bitmap.height) {
+            w = Math.min(bitmap.width, 50);
+            h = w / bitmap.width * bitmap.height;
+        }
+        else {
+            h = Math.min(bitmap.height, 50);
+            w = h / bitmap.height * bitmap.width;
+        }
+
+        ctx.drawImage(bitmap, 0, 0, w, h);
         
-        let imageData = ctx.getImageData(0, 0, bitmap.width, bitmap.height);
+        let imageData = ctx.getImageData(0, 0, w, h);
         const data = imageData.data;
         const newWidth = Math.floor((bitmap.width + 7) / 8);
         const out =  new Uint8Array(newWidth * bitmap.height);
@@ -53,7 +63,7 @@ export default function CustomizeWidgetPage() {
             }
         }
 
-        changeImage(out, bitmap.width, bitmap.height);
+        changeImage(out, w, h);
     }
 
     return (
