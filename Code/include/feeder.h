@@ -2,7 +2,7 @@
 #include <Servo.h>
 const int STOP = 90;
 const int SPEED = 180;
-const int TIME = 2000;
+const int TIME = 200;
 
 
 class Feeder {
@@ -21,7 +21,7 @@ public:
 
     void feed(int n_portion) {
         feeder.write(SPEED);
-        delay(TIME);
+        delay(TIME * n_portion);
         feeder.write(STOP);
     }
 };

@@ -97,16 +97,16 @@ async function main() {
 	});
 	mq.on('message', async (topic, message) => {
 		if (topic.endsWith('/sensors')) {
-			let { timestamp, temperature, pumpRunning } = JSON.parse(message.toString());
-			timestamp /= 1000;
+			let { temperature, pumpRunning } = JSON.parse(message.toString());
 
 			aquariumStatus.temperature = temperature;
+			aquariumStatus.pumpRunning = pumpRunning;
 
 			const QUERY = `
 				INSERT INTO device_logs (timestamp, temperature)
-				VALUES (TO_TIMESTAMP(?), ?)
+				VALUES (CURRENT_TIMESTAMP, ?)
 			`;
-			db.run(QUERY, [timestamp, temperature])
+			db.run(QUERY, [temperature])
 				.catch(console.error);
 		} else if (topic.endsWith('/power')) {
 			logAction(`ESP powered ${message.toString()}.`)
@@ -276,7 +276,7 @@ async function main() {
 		buffer.writeUInt16LE(height, 2);
 		buffer.set(image, 4);
 
-		mq.publish(TOPIC + '/change-image', buffer);
+		mq.publish(TOPIC + '/command/change-image', buffer);
 		res.status(200);
 	});
 
