@@ -21,7 +21,6 @@ const systemInstruction =
 
 interface CurrentData {
   temp: number;
-  humid: number;
   isPumping: boolean;
 }
 
@@ -33,7 +32,6 @@ export class Chat {
   constructor(apiKey: string) {
     this.currentData = {
       temp: NaN,
-      humid: NaN,
       isPumping: false,
     };
 
@@ -44,10 +42,9 @@ export class Chat {
     });
   }
 
-  updateData(nTemp: number, nHumid: number, nPump: boolean) {
+  updateData(nTemp: number, nPump: boolean) {
     this.currentData = {
       temp: nTemp,
-      humid: nHumid,
       isPumping: nPump,
     };
   }
@@ -62,7 +59,6 @@ export class Chat {
     const contextData =
       `Current Aquarium Data:\n` +
       `Temperature: ${this.currentData.temp}°C\n` +
-      `Humidity: ${this.currentData.humid}%\n` +
       `Pumping: ${this.currentData.isPumping ? "ON" : "OFF"}`;
 
     const fullMessage = `${message}\n\n${contextData}`;
@@ -83,7 +79,7 @@ export class Chat {
     //     role: "model",
     //     parts: [{ text: replyText }],
     // });
-    history[history.length - 2].parts = [{text: message}]; // not showing current data
+    history[history.length - 2].parts = [{ text: message }]; // not showing current data
     console.log("result ", result);
     console.log(history);
     return history;
@@ -93,7 +89,7 @@ export class Chat {
 // Ví dụ sử dụng
 // (async () => {
 //   const chatBot = new Chat(process.env.GEMINI_API_KEY!);
-//   chatBot.updateData(26.5, 78, true);
+//   chatBot.updateData(26.5, true);
 
 //   let history: Array<{ role: string; parts: { text: string }[] }> = [];
 

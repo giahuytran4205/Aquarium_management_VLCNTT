@@ -328,8 +328,7 @@ async function main() {
 				return res.status(400).json({ error: "Missing 'message' in request body" });
 			}
 
-			// Tạm thời dùng dữ liệu cảm biến mẫu
-			chatBot.updateData(26.5, 78, true);
+			chatBot.updateData(aquariumStatus.temperature, aquariumStatus.pumpRunning);
 
 			// Gọi AI và lấy lịch sử mới
 			const newHistory = await chatBot.chat(message, history || []);
