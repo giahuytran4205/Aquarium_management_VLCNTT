@@ -11,6 +11,7 @@
 #include "button.h"
 #include "feeder.h"
 #include <scheduler.h>
+#include <utils.h>
 #include "temperature.h"
 
 // #include <OneWire.h>
@@ -170,6 +171,7 @@ void loop() {
 			}
 		}
 		if (mq.connected()) {
+			mq.subscribe((TOPIC + "/#").c_str());
 			timer++;
 			if (timer % 5 == 0) {
 				mq.publish((TOPIC + "/data/sensors").c_str(),
@@ -180,7 +182,9 @@ void loop() {
 					}
 				)").c_str());
 			}
-			display.showInfo("8/4/2025", "Monday", mySensor.get_lastest_celcius(), runPump, "10:00AM");
+			if (timer % 5 == 0) {
+				display.showInfo(getDate(), getDayOfWeek(), getTime(), 20, true);
+			}
 		}
 	}
 	delay(100);

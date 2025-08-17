@@ -14,8 +14,10 @@ public:
         m_image = nullptr;
         m_imgWidth = 0;
         m_imgHeight = 0;
+
+        clearDisplay();
     }
     ~Display();
     void setImage(const uint8_t *image, int width, int height);
-    void showInfo(const char *date, const char *weekday, int waterTemp, bool oxygen, const char *nextFeeding);
+    void showInfo(String date, String weekday, String time, int waterTemp, bool oxygen);
 };
