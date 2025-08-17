@@ -98,7 +98,7 @@ void setupMQTT() {
   	mq.setCallback(mqttCallback);
 }
 
-time_t setupTime ()
+void setupTime ()
 {
 	// UTC+7 (Viet Nam)
 	configTime(7*3600, 0, "time.nist.gov", "pool.ntp.org");
