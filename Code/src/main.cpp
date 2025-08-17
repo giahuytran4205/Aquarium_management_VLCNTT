@@ -68,7 +68,7 @@ void controlPump(bool on) {
 void mqttCallback(char* topic, byte* payload, uint length) {
 	String payloadString = "";
 	for (int i = 0; i < length; i++)
-		payloadString += payload[i];
+		payloadString += (char)payload[i];
 
 	if (strstr(topic, "/change-image")) {
 		uint16_t width  = payload[0] | (payload[1] << 8);
@@ -82,10 +82,14 @@ void mqttCallback(char* topic, byte* payload, uint length) {
 		display.setImage(imageData, width, height);
 	} else if (strstr(topic, "/feed")) {
 		int grams = atoi(payloadString.c_str());
+		Serial.println(grams);
 		startFeed(grams);
 	} else if (strstr(topic, "/pump")) {
+		Serial.println(payloadString);
+		Serial.println(strstr(payloadString.c_str(), "on"));
 		controlPump(strstr(payloadString.c_str(), "on") != nullptr);
 	}
+ 
 }
 
 void setupMQTT() {
@@ -130,6 +134,11 @@ void setup() {
 
 int timer = 0;
 void loop() {
+	// Serial.print("Wifi connected?");
+	// Serial.println(WiFi.status());
+	
+	// Serial.print("mq connected?");
+	// Serial.println(mq.connected());
 	connectionConfig.loop();
 	mq.loop();
 
@@ -138,15 +147,14 @@ void loop() {
 	C.update(); // Feed
 	mySensor.update();
 	
-	if (B.isPressFor(1000)) {
+	if (B.isPress()) {
 		controlPump(!runPump);
 		B.resetTimer();
 	}
 	digitalWrite(RELAY_PIN, runPump ? HIGH : LOW);
 
-	if (C.isPressFor(1000)) {
+	if (C.isPress()) {
 		startFeed(2);
-		C.resetTimer();
 	}
 
 	if (WiFi.status() == WL_CONNECTED) {
@@ -175,7 +183,7 @@ void loop() {
 			display.showInfo("8/4/2025", "Monday", mySensor.get_lastest_celcius(), runPump, "10:00AM");
 		}
 	}
-	delay(1000);
+	delay(100);
 }
 
 
