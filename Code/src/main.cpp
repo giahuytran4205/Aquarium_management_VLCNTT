@@ -196,7 +196,7 @@ void loop() {
 				)").c_str());
 			}
 			if (timer % 5 == 0) {
-				display.showInfo(getDate(), getDayOfWeek(), getTime(), 20, true);
+				display.showInfo(getDate(), getDayOfWeek(), getTime(), mySensor.get_temperature(), runPump);
 			}
 		}
 	}
