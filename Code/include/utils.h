@@ -36,7 +36,7 @@ String getTime() {
         return "";
     }
     char buffer[20];
-    snprintf(buffer, sizeof(buffer), "%02d/%02d/%02d",
+    snprintf(buffer, sizeof(buffer), "%02d:%02d:%02d",
             timeinfo.tm_hour,
             timeinfo.tm_min,
             timeinfo.tm_sec);
