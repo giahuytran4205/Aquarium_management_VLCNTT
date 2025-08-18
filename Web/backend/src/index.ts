@@ -91,6 +91,21 @@ async function main() {
 		let rows = await result.getRowObjectsJS();
 		return rows;
 	}
+	async function getAllLoggedInFCM() {
+		const QUERY = `
+			SELECT uid FROM fcm_tokens
+		`;
+		let result = await db.run(QUERY);
+		let rows = await result.getRowObjectsJS();
+		return rows;
+	}
+	async function notifyAndLogAction(message: string) {
+		logAction(message);
+		for (let { uid } of await getAllLoggedInFCM()) {
+			console.log(uid);
+			sendNotificationToUser(uid as string, "Action performed", message);
+		}
+	}
 
 	function requestFeed(grams: number) {
 		mq.publish(`${TOPIC}/command/feed`, grams.toFixed(0));
@@ -125,16 +140,20 @@ async function main() {
 		}
 	}
 
-	function sendDailyEmail(email: string) {
+	function sendEmail(email: string, text: string) {
 		resend.emails.send({
 			from: 'hello_you@resend.dev',
 			to: email,
 			subject: 'Your aquarium status',
-			text: `The current temperature is ${aquariumStatus.temperature} C.
+			text,
+		});
+	}
+	function sendDailyEmail(email: string) {
+		sendEmail(email, `The current temperature is ${aquariumStatus.temperature} C.
 The water pump is ${aquariumStatus.pumpRunning ? "on" : "off"}.
 
 Remember to keep your fish well-fed!`,
-		});
+		);
 	}
 	let dailyEmailJobRule = new schedule.RecurrenceRule();
 	dailyEmailJobRule.hour = 7;
@@ -161,13 +180,13 @@ Remember to keep your fish well-fed!`,
 			db.run(QUERY, [temperature])
 				.catch(console.error);
 		} else if (topic.endsWith('/power')) {
-			logAction(`ESP powered ${message.toString()}.`)
+			notifyAndLogAction(`ESP powered ${message.toString()}.`)
 		} else if (topic.endsWith('/pump')) {
-			logAction(`Oxygen pump powered ${message.toString()}.`)
+			notifyAndLogAction(`Oxygen pump powered ${message.toString()}.`)
 			aquariumStatus.pumpRunning = message.toString() === "on";
 		} else if (topic.endsWith('/feed')) {
 			let amount = Number(message.toString());
-			logAction(`Dispensed ${amount}g of food.`);
+			notifyAndLogAction(`Dispensed ${amount}g of food.`);
 
 			const QUERY = `
 				INSERT INTO feed_logs (timestamp, amount)
