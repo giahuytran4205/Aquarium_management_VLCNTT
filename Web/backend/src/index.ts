@@ -125,6 +125,23 @@ async function main() {
 		}
 	}
 
+	function sendDailyEmail(email: string) {
+		resend.emails.send({
+			from: 'hello_you@resend.dev',
+			to: email,
+			subject: 'Your aquarium status',
+			text: `The current temperature is ${aquariumStatus.temperature} C.
+The water pump is ${aquariumStatus.pumpRunning ? "on" : "off"}.
+
+Remember to keep your fish well-fed!`,
+		});
+	}
+	let dailyEmailJobRule = new schedule.RecurrenceRule();
+	dailyEmailJobRule.hour = 7;
+	dailyEmailJobRule.minute = 0;
+	let dailyEmailJob = schedule.scheduleJob(dailyEmailJobRule,
+		() => sendDailyEmail("etouonichanwa3ka@gmail.com"));
+
 	mq.on('connect', () => {
 		console.log('Connected to MQTT broker.');
 		mq.subscribe("aquarium1b3d5f/data/#");
@@ -446,21 +463,6 @@ async function main() {
 		console.error('❌ Lỗi chưa bắt:', err);
 		gracefulShutdown();
 	});
-
-
-
-	resend.emails.send({
-		from: 'hello_you@resend.dev',
-		to: 'etouonichanwa3ka@gmail.com',
-		subject: 'Hello World',
-		html: '<p>Congrats on sending your <strong>first email</strong>!</p>'
-	});
-
-
-
-
-
-
 }
 
 main();
